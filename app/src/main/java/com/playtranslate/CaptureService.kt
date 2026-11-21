@@ -3099,6 +3099,7 @@ class CaptureService : Service() {
         authoritativeBounds: Boolean = false,
         /** Where the minimum text size may grow the boxes (see [GrowthLimits]). */
         growthLimits: GrowthLimits = GrowthLimits.NONE,
+        backdropFrame: Bitmap? = null,
     ) {
         // livePaused, not just holdActive: no live overlay may render under
         // the rescue alert either — the backstop that keeps ANY live mode,
@@ -3117,6 +3118,7 @@ class CaptureService : Service() {
             renderConfig = OverlayRenderConfig.from(Prefs(this)),
             authoritativeBounds = authoritativeBounds,
             growthLimits = growthLimits,
+            backdropFrame = backdropFrame,
         )
     }
 
