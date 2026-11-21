@@ -5,6 +5,7 @@ on:
     branches:
       - feature/overlay-background-controls
       - feature/arm64-language-backup
+      - feature/live-floating-style-dialogue-guard
   workflow_dispatch:
 
 jobs:

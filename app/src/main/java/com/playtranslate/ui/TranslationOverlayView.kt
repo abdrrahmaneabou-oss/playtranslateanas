@@ -110,8 +110,7 @@ class TranslationOverlayView(
      *  view-reuse guard can compare it: it derives from user-mutable prefs, so
      *  a change must force a fresh view (a ctor val can't be refreshed by
      *  [setBoxes]). */
-    var renderConfig: OverlayRenderConfig = OverlayRenderConfig.DEFAULT,
-        private set,
+    renderConfig: OverlayRenderConfig = OverlayRenderConfig.DEFAULT,
     /** When non-null, this overlay handles its own dismissal. ACTION_DOWN
      *  touches dismiss immediately (race-safe against the hold-release
      *  callback and second-finger taps during a hold), and TalkBack's
@@ -168,12 +167,17 @@ class TranslationOverlayView(
         layoutDirection = LAYOUT_DIRECTION_LTR
     }
 
+    var renderConfig: OverlayRenderConfig = renderConfig
+        private set
+
     private val dp = context.resources.displayMetrics.density
 
     /** The autosize floor. It IS the minimum text size's default, so the
      *  setting's resting value means "overlays as they always were". */
     private val minTextSizeSp = Prefs.OVERLAY_MIN_TEXT_SP_DEFAULT
-    private val maxTextSizeSp = 200
+    // Upper safety limit; the per-box OCR glyph scale below normally yields
+    // a far smaller limit (dialogue choices stay around their source size).
+    private val maxTextSizeSp = 96
     /** Capped autosize ceiling (sp) for GROW boxes — keeps the translation a small, centred
      *  block in the tall on-source background instead of ballooning to fill the column height. */
     private val growMaxTextSizeSp = 18
@@ -623,7 +627,20 @@ class TranslationOverlayView(
                     RenderMode.SOURCE_ANGLE -> angledW
                     else -> rectW
                 }
-                val autoMax = unbreakableFitMaxSp(box.translatedText, wrapWidthPx, baseMax)
+                val sourceLineHeight = box.bounds.height().toFloat() /
+                    box.lineCount.coerceAtLeast(1)
+                val peerHeight = TranslationFontGuard.medianPeerHeight(box, measured)
+                val sourceCap = if (mode == RenderMode.ROTATE || mode == RenderMode.SOURCE_ANGLE)
+                    baseMax else TranslationFontGuard.sourceCeilingSp(
+                        sourceLineHeightPx = sourceLineHeight,
+                        displayScaleY = scaleY,
+                        scaledDensity = context.resources.displayMetrics.scaledDensity,
+                        minSp = minTextSizeSp,
+                        globalMaxSp = baseMax,
+                        peerMedianHeightPx = peerHeight,
+                    )
+                val autoMax = unbreakableFitMaxSp(box.translatedText, wrapWidthPx,
+                    minOf(baseMax, sourceCap))
 
                 val child: View = when {
                     box.translatedText.isEmpty() -> {
