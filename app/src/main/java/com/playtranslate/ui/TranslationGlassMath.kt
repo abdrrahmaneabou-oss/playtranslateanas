@@ -13,9 +13,9 @@ internal object TranslationGlassMath {
     fun tintAlpha(transparentPercent: Int): Int =
         (255f * (100 - transparentPercent.coerceIn(0, 100)) / 100f).roundToInt()
 
-    /** Continuous blur radius: 0 bypasses, every integer % has a distinct
-     *  kernel strength. Fractional edge weights avoid 24 large slider steps. */
-    fun blurRadius(percent: Int): Float = percent.coerceIn(0, 100) * (24f / 100f)
+    /** Each side extends by 1–15% of the text box's own selected width. */
+    fun horizontalOverhang(boxWidth: Float, percentPerSide: Int): Float =
+        boxWidth.coerceAtLeast(0f) * percentPerSide.coerceIn(1, 15) / 100f
 
     /** Broad feather: even 10% spreads over ~19% of either side, while
      *  100% still reserves a visible central core for text and pinhole
