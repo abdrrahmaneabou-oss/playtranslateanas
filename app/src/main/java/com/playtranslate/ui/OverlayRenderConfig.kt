@@ -25,7 +25,7 @@ data class OverlayRenderConfig(
     val verticalGrowEnabled: Boolean = false,
     val minTextSp: Int = Prefs.OVERLAY_MIN_TEXT_SP_DEFAULT,
     val backgroundTransparency: Int = 12,
-    val backgroundBlur: Int = 0,
+    val backgroundHorizontalExpansion: Int = 5,
     val backgroundRounded: Boolean = false,
     val backgroundEdgeFade: Int = 0,
 ) {
@@ -39,7 +39,7 @@ data class OverlayRenderConfig(
             verticalGrowEnabled = prefs.verticalTextGrow,
             minTextSp = prefs.overlayMinTextSp,
             backgroundTransparency = prefs.overlayBackgroundTransparency,
-            backgroundBlur = prefs.overlayBackgroundBlur,
+            backgroundHorizontalExpansion = prefs.overlayBackgroundHorizontalExpansion,
             backgroundRounded = prefs.overlayBackgroundRounded,
             backgroundEdgeFade = prefs.overlayBackgroundEdgeFade,
         )
