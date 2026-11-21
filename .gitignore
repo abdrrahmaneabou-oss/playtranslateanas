@@ -78,3 +78,7 @@ Thumbs.db
 
 # Kotlin 2.x compiler daemon session data
 .kotlin/
+
+# Generated SHA-verified native runtime libraries (CI/local fast builds only)
+mnn/src/main/jniLibs/
+bergamot/src/main/jniLibs/

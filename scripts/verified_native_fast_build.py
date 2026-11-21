@@ -27,8 +27,8 @@ PINNED_GIT_OBJECTS = {
     "gradle/libs.versions.toml": "eb2c87dfdc3c89ab7c191b2268fb89b8c925871d",
     # These two versions differ from build #11 ONLY by the explicitly guarded
     # optional useVerifiedPrebuiltNative flag / conditional CMake declaration.
-    "mnn/build.gradle.kts": "3b1f0820b08f600277ef52d9c479cd53039b4122",
-    "bergamot/build.gradle.kts": "18efb4a78a41a24b2b2048c54f0ace8635926aea",
+    "mnn/build.gradle.kts": "ad9b6280f2fe8df90209d030571dacd9b28e9637",
+    "bergamot/build.gradle.kts": "29a8a404f8d76f43b6733a9f38b7c346f3dcb612",
 }
 
 # From APK artifact run #11. The app's native ML Kit / OpenCV dependencies
@@ -81,7 +81,7 @@ def extract(apkfile):
             if actual != expected:
                 raise RuntimeError(f"Untrusted native library {name}: {actual} != {expected}")
             group = "mnn" if name in MNN else "bergamot"
-            path = pathlib.Path("fast-native") / group / "arm64-v8a" / name
+            path = pathlib.Path(group) / "src/main/jniLibs/arm64-v8a" / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
             print(f"Staged verified {name} ({len(data)} bytes)")
@@ -92,7 +92,7 @@ def verify_cache():
         raise RuntimeError("Native source/config no longer matches trusted baseline")
     for name, expected in NATIVE_HASHES.items():
         group = "mnn" if name in MNN else "bergamot"
-        path = pathlib.Path("fast-native") / group / "arm64-v8a" / name
+        path = pathlib.Path(group) / "src/main/jniLibs/arm64-v8a" / name
         if not path.is_file() or sha256(path.read_bytes()) != expected:
             raise RuntimeError("Native cache absent or checksum mismatch: " + str(path))
     print("Verified all six cached libraries from successful run #11")

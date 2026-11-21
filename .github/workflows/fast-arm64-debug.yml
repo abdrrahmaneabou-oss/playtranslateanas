@@ -38,7 +38,9 @@ jobs:
         if: steps.native-sources.outputs.eligible == 'true'
         uses: actions/cache@v4
         with:
-          path: fast-native
+          path: |
+            mnn/src/main/jniLibs
+            bergamot/src/main/jniLibs
           key: playtranslate-verified-native-arm64-build11-v1
 
       - name: Bootstrap native binaries from successful #11 build
