@@ -11,12 +11,12 @@ class TranslationGlassMathTest {
         assertEquals(128, TranslationGlassMath.tintAlpha(50))
     }
 
-    @Test fun zeroBlurIsDisabledAndSliderNeverGetsWeaker() {
-        assertEquals(0f, TranslationGlassMath.blurRadius(0), 0f)
-        val all = (0..100).map(TranslationGlassMath::blurRadius)
-        assertTrue(all.zipWithNext().all { (a, b) -> a < b })
-        assertTrue(TranslationGlassMath.blurRadius(100) > TranslationGlassMath.blurRadius(10))
-        assertTrue(TranslationGlassMath.blurRadius(10) > 0)
+    @Test fun horizontalExtensionDependsOnEachTextWidth() {
+        assertEquals(5f, TranslationGlassMath.horizontalOverhang(100f, 5), 0f)
+        assertEquals(10f, TranslationGlassMath.horizontalOverhang(200f, 5), 0f)
+        assertEquals(20f, TranslationGlassMath.horizontalOverhang(400f, 5), 0f)
+        assertEquals(15f, TranslationGlassMath.horizontalOverhang(100f, 15), 0f)
+        assertEquals(1f, TranslationGlassMath.horizontalOverhang(100f, 0), 0f)
     }
 
     @Test fun fadeIsContinuousBroadAndMonotone() {
