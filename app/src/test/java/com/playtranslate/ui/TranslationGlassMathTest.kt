@@ -27,7 +27,7 @@ class TranslationGlassMathTest {
         assertTrue(all.zipWithNext().all { (a, b) -> a <= b })
         assertEquals(255, TranslationGlassMath.erasedAt(0f))
         assertEquals(0, TranslationGlassMath.erasedAt(1f))
-        assertEquals(128, TranslationGlassMath.erasedAt(0.5f), 1)
+        assertTrue(kotlin.math.abs(TranslationGlassMath.erasedAt(0.5f) - 128) <= 1)
         assertTrue((0..100).zipWithNext().all { (a, b) ->
             TranslationGlassMath.erasedAt(a / 100f) >=
                 TranslationGlassMath.erasedAt(b / 100f)
