@@ -170,7 +170,7 @@ internal object TranslationBackdropPixels {
     fun blur(frame: Bitmap, percent: Int): Bitmap? {
         if (frame.isRecycled || frame.width < 1 || frame.height < 1) return null
         val radius = TranslationGlassMath.blurRadius(percent)
-        if (radius == 0) return null
+        if (radius == 0f) return null
 
         val scale = minOf(1f, MAX_SAMPLE_LONG_SIDE.toFloat() /
             maxOf(frame.width, frame.height))
@@ -196,19 +196,31 @@ internal object TranslationBackdropPixels {
         }
     }
 
-    private fun horizontal(src: IntArray, dst: IntArray, w: Int, h: Int, radius: Int) {
-        val divisor = 2 * radius + 1
+    /** Fractional box-filter border weights give 101 gradual intensities.
+     *  A running sum makes each separable pass linear in pixel count. */
+    private fun horizontal(src: IntArray, dst: IntArray, w: Int, h: Int, radius: Float) {
+        val whole = radius.toInt()
+        val fraction = radius - whole
+        val divisor = 2f * whole + 1f + 2f * fraction
         for (y in 0 until h) {
             val start = y * w
             var rs = 0; var gs = 0; var bs = 0
-            for (k in -radius..radius) {
+            for (k in -whole..whole) {
                 val p = src[start + k.coerceIn(0, w - 1)]
                 rs += Color.red(p); gs += Color.green(p); bs += Color.blue(p)
             }
             for (x in 0 until w) {
-                dst[start + x] = Color.rgb(rs / divisor, gs / divisor, bs / divisor)
-                val leaving = src[start + (x - radius).coerceIn(0, w - 1)]
-                val entering = src[start + (x + radius + 1).coerceIn(0, w - 1)]
+                val l = src[start + (x - whole - 1).coerceIn(0, w - 1)]
+                val r = src[start + (x + whole + 1).coerceIn(0, w - 1)]
+                val red = ((rs + fraction * (Color.red(l) + Color.red(r))) / divisor)
+                    .roundToInt().coerceIn(0, 255)
+                val green = ((gs + fraction * (Color.green(l) + Color.green(r))) / divisor)
+                    .roundToInt().coerceIn(0, 255)
+                val blue = ((bs + fraction * (Color.blue(l) + Color.blue(r))) / divisor)
+                    .roundToInt().coerceIn(0, 255)
+                dst[start + x] = Color.rgb(red, green, blue)
+                val leaving = src[start + (x - whole).coerceIn(0, w - 1)]
+                val entering = src[start + (x + whole + 1).coerceIn(0, w - 1)]
                 rs += Color.red(entering) - Color.red(leaving)
                 gs += Color.green(entering) - Color.green(leaving)
                 bs += Color.blue(entering) - Color.blue(leaving)
@@ -216,18 +228,28 @@ internal object TranslationBackdropPixels {
         }
     }
 
-    private fun vertical(src: IntArray, dst: IntArray, w: Int, h: Int, radius: Int) {
-        val divisor = 2 * radius + 1
+    private fun vertical(src: IntArray, dst: IntArray, w: Int, h: Int, radius: Float) {
+        val whole = radius.toInt()
+        val fraction = radius - whole
+        val divisor = 2f * whole + 1f + 2f * fraction
         for (x in 0 until w) {
             var rs = 0; var gs = 0; var bs = 0
-            for (k in -radius..radius) {
+            for (k in -whole..whole) {
                 val p = src[k.coerceIn(0, h - 1) * w + x]
                 rs += Color.red(p); gs += Color.green(p); bs += Color.blue(p)
             }
             for (y in 0 until h) {
-                dst[y * w + x] = Color.rgb(rs / divisor, gs / divisor, bs / divisor)
-                val leaving = src[(y - radius).coerceIn(0, h - 1) * w + x]
-                val entering = src[(y + radius + 1).coerceIn(0, h - 1) * w + x]
+                val l = src[(y - whole - 1).coerceIn(0, h - 1) * w + x]
+                val r = src[(y + whole + 1).coerceIn(0, h - 1) * w + x]
+                val red = ((rs + fraction * (Color.red(l) + Color.red(r))) / divisor)
+                    .roundToInt().coerceIn(0, 255)
+                val green = ((gs + fraction * (Color.green(l) + Color.green(r))) / divisor)
+                    .roundToInt().coerceIn(0, 255)
+                val blue = ((bs + fraction * (Color.blue(l) + Color.blue(r))) / divisor)
+                    .roundToInt().coerceIn(0, 255)
+                dst[y * w + x] = Color.rgb(red, green, blue)
+                val leaving = src[(y - whole).coerceIn(0, h - 1) * w + x]
+                val entering = src[(y + whole + 1).coerceIn(0, h - 1) * w + x]
                 rs += Color.red(entering) - Color.red(leaving)
                 gs += Color.green(entering) - Color.green(leaving)
                 bs += Color.blue(entering) - Color.blue(leaving)

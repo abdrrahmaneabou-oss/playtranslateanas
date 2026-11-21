@@ -12,9 +12,9 @@ class TranslationGlassMathTest {
     }
 
     @Test fun zeroBlurIsDisabledAndSliderNeverGetsWeaker() {
-        assertEquals(0, TranslationGlassMath.blurRadius(0))
+        assertEquals(0f, TranslationGlassMath.blurRadius(0), 0f)
         val all = (0..100).map(TranslationGlassMath::blurRadius)
-        assertTrue(all.zipWithNext().all { (a, b) -> a <= b })
+        assertTrue(all.zipWithNext().all { (a, b) -> a < b })
         assertTrue(TranslationGlassMath.blurRadius(100) > TranslationGlassMath.blurRadius(10))
         assertTrue(TranslationGlassMath.blurRadius(10) > 0)
     }

@@ -13,13 +13,9 @@ internal object TranslationGlassMath {
     fun tintAlpha(transparentPercent: Int): Int =
         (255f * (100 - transparentPercent.coerceIn(0, 100)) / 100f).roundToInt()
 
-    /** Radius in a ~960px-long-side capture. 0 is a real bypass, not radius 1.
-     *  The three box passes approximate a smooth Gaussian colour mix. */
-    fun blurRadius(percent: Int): Int {
-        val p = percent.coerceIn(0, 100)
-        if (p == 0) return 0
-        return 1 + (23.0 * p / 100.0).roundToInt()
-    }
+    /** Continuous blur radius: 0 bypasses, every integer % has a distinct
+     *  kernel strength. Fractional edge weights avoid 24 large slider steps. */
+    fun blurRadius(percent: Int): Float = percent.coerceIn(0, 100) * (24f / 100f)
 
     /** Broad feather: even 10% spreads over ~19% of either side, while
      *  100% still reserves a visible central core for text and pinhole
