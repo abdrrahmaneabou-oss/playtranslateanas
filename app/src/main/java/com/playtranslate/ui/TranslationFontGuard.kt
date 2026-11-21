@@ -11,6 +11,8 @@ import kotlin.math.floor
  * into it produced 200sp Arabic covering neighbouring dialogue choices.
  *
  * Source height, not translated text length, anchors the size. Nearby peers
+ * This helper must remain a pure layout calculation so Kotlin-only edits never
+ * require recompiling the native OCR and translation libraries.
  * that occupy the same x lane and form a stack of UI choices supply a robust
  * median: one unusually tall OCR rectangle cannot make only one choice huge.
  */
