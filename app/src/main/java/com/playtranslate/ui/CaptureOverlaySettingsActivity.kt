@@ -109,10 +109,10 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
     private lateinit var tvOverlayMinTextValue: TextView
     private lateinit var tvOverlayMinTextExample: TextView
     private lateinit var sliderBackgroundTransparency: SizeSliderView
-    private lateinit var sliderBackgroundBlur: SizeSliderView
+    private lateinit var sliderBackgroundHorizontalExpansion: SizeSliderView
     private lateinit var sliderBackgroundEdgeFade: SizeSliderView
     private lateinit var tvBackgroundTransparencyValue: TextView
-    private lateinit var tvBackgroundBlurValue: TextView
+    private lateinit var tvBackgroundHorizontalExpansionValue: TextView
     private lateinit var tvBackgroundEdgeFadeValue: TextView
     private lateinit var rowBackgroundRounded: View
     private lateinit var switchBackgroundRounded: MaterialSwitch
@@ -150,10 +150,10 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
         rowTouchesRefresh = findViewById(R.id.rowTouchesRefresh)
         switchTouchesRefresh = rowTouchesRefresh.findViewById(R.id.switchRowToggle)
         sliderBackgroundTransparency = findViewById(R.id.sliderBackgroundTransparency)
-        sliderBackgroundBlur = findViewById(R.id.sliderBackgroundBlur)
+        sliderBackgroundHorizontalExpansion = findViewById(R.id.sliderBackgroundHorizontalExpansion)
         sliderBackgroundEdgeFade = findViewById(R.id.sliderBackgroundEdgeFade)
         tvBackgroundTransparencyValue = findViewById(R.id.tvBackgroundTransparencyValue)
-        tvBackgroundBlurValue = findViewById(R.id.tvBackgroundBlurValue)
+        tvBackgroundHorizontalExpansionValue = findViewById(R.id.tvBackgroundHorizontalExpansionValue)
         tvBackgroundEdgeFadeValue = findViewById(R.id.tvBackgroundEdgeFadeValue)
         rowBackgroundRounded = findViewById(R.id.rowBackgroundRounded)
         switchBackgroundRounded = rowBackgroundRounded.findViewById(R.id.switchRowToggle)
@@ -386,8 +386,9 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
         // A changed render config takes effect with a fresh live capture,
         // as the existing minimum-text-size setting does.
         fun bindAppearanceSlider(slider: SizeSliderView, valueText: TextView,
-            titleRes: Int, initial: Int, save: (Int) -> Unit) {
-            slider.setRange(0, 100)
+            titleRes: Int, initial: Int, minValue: Int = 0, maxValue: Int = 100,
+            save: (Int) -> Unit) {
+            slider.setRange(minValue, maxValue)
             slider.value = initial
             slider.contentDescription = getString(titleRes)
             valueText.text = initial.toString() + "%"
@@ -400,9 +401,10 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
         bindAppearanceSlider(sliderBackgroundTransparency, tvBackgroundTransparencyValue,
             R.string.settings_overlay_bg_transparency_title, prefs.overlayBackgroundTransparency
         ) { prefs.overlayBackgroundTransparency = it }
-        bindAppearanceSlider(sliderBackgroundBlur, tvBackgroundBlurValue,
-            R.string.settings_overlay_bg_blur_title, prefs.overlayBackgroundBlur
-        ) { prefs.overlayBackgroundBlur = it }
+        bindAppearanceSlider(sliderBackgroundHorizontalExpansion, tvBackgroundHorizontalExpansionValue,
+            R.string.settings_overlay_bg_horizontal_extension_title,
+            prefs.overlayBackgroundHorizontalExpansion, minValue = 1, maxValue = 15
+        ) { prefs.overlayBackgroundHorizontalExpansion = it }
         bindAppearanceSlider(sliderBackgroundEdgeFade, tvBackgroundEdgeFadeValue,
             R.string.settings_overlay_bg_fade_title, prefs.overlayBackgroundEdgeFade
         ) { prefs.overlayBackgroundEdgeFade = it }
