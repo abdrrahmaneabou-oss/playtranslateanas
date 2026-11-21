@@ -259,12 +259,17 @@ class TranslationOverlayView(
         if (renderConfig == next) return
         // The quick menu edits only appearance, but the same method safely
         // handles a full config change by rebuilding children in place.
+        val blurChanged = renderConfig.backgroundBlur != next.backgroundBlur
         renderConfig = next
-        val oldBlur = blurredBackdrop
-        blurredBackdrop = cleanBackdropSample?.let {
-            TranslationBackdropPixels.blur(it, next.backgroundBlur)
+        // Transparency/feather/corner drags are cheap: reuse the last blurred
+        // screenshot rather than re-running the CPU blur 100 times a second.
+        if (blurChanged) {
+            val oldBlur = blurredBackdrop
+            blurredBackdrop = cleanBackdropSample?.let {
+                TranslationBackdropPixels.blur(it, next.backgroundBlur)
+            }
+            oldBlur?.recycle()
         }
-        oldBlur?.recycle()
         if (width > 0 && height > 0) rebuildChildren()
     }
 
