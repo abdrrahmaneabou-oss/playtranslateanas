@@ -419,6 +419,7 @@ class TranslationOverlayView(
             targetStackable = renderConfig.verticalTextStackable,
             growEnabled = renderConfig.verticalGrowEnabled,
             minText = minTextGrowth(),
+            experimentalFirstPass = Prefs(context).firstPassOptimizationEnabled,
         )
 
         val hasPlaceholders = boxes.any { it.translatedText.isEmpty() }

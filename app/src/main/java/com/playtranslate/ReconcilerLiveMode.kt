@@ -621,7 +621,10 @@ class ReconcilerLiveMode(
             // translated regions finish; the old mode keeps every placeholder.
             val committed = if (prefs.firstPassOptimizationEnabled &&
                 presenter.flavor == OverlayFlavor.TRANSLATION
-            ) finalAnchors.filter { it.translatedText.isNotBlank() } else finalAnchors
+            ) FirstPassDisplayGate.accept(finalAnchors) else finalAnchors
+            // Only one final, quality-checked paint per translation cycle in
+            // experimental mode. The original progressive path is identical
+            // when the setting is OFF.
             cachedBoxes = kept + committed
             showBoxes(kept + committed, groups, raw)
             presenter.emitApplied(

@@ -33,6 +33,11 @@ class FirstPassGroupingStrategyTest {
             first, Rect(150, 242, 420, 276)))
     }
 
+    @Test fun resistsStandaloneTitleAndDistantStatLabel() {
+        assertFalse(FirstPassGroupingStrategy.shouldMerge(
+            "Noblesse Oblige", "2-Piece Set: ATK +20%", first, next))
+    }
+
     @Test fun acceptsClearLowercaseContinuationButNotHugeScaleDrift() {
         assertTrue(FirstPassGroupingStrategy.shouldMerge(
             "You have received", "another reward", first, next))

@@ -7,6 +7,8 @@ import com.playtranslate.OcrPreprocessingRecipe
 import com.playtranslate.language.OcrBackend
 import com.playtranslate.ocr.core.LayoutAnalyzer
 import com.playtranslate.ocr.core.FirstPassGroupingStrategy
+import com.playtranslate.FirstPassVision
+import android.os.SystemClock
 import com.playtranslate.ocr.core.LayoutGroup
 import com.playtranslate.ocr.core.OcrImage
 import com.playtranslate.ocr.core.RecognizedTextNormalizer
@@ -79,6 +81,7 @@ object OcrPipeline {
         darkBackgroundProvider: () -> Boolean,
         regionPreFilter: com.playtranslate.ocr.core.RegionPreFilter? = null,
         angleNoiseGateDeg: Float = com.playtranslate.ocr.core.OcrBox.ANGLE_NOISE_GATE_DEG,
+        firstPassOptimization: Boolean = false,
         block: suspend (Recognition) -> T,
     ): T = withContext(Dispatchers.Default) {
         // Engine + dark-background inputs are resolved HERE, not as eager
@@ -89,13 +92,24 @@ object OcrPipeline {
         val engine = resolved.engine
         val isDarkBackground = darkBackgroundProvider()
         val selfPreprocesses = engine.capabilities.selfPreprocesses
-        val processed = if (selfPreprocesses) bitmap else recipe.apply(bitmap, isDarkBackground)
+        val selectedRecipe = if (firstPassOptimization && !selfPreprocesses)
+            FirstPassVision.select(bitmap, recipe) else recipe
+        val processed = if (selfPreprocesses) bitmap else selectedRecipe.apply(bitmap, isDarkBackground)
         val scaleFactor =
             if (processed === bitmap) 1f else processed.width.toFloat() / bitmap.width
         try {
-            val recognized = engine.recognize(
+            val beganOcr = SystemClock.elapsedRealtime()
+            val initial = engine.recognize(
                 OcrImage(processed, sourceLang, screenshotWidth, regionPreFilter, angleNoiseGateDeg),
             )
+            // An OPTIONAL single small crop re-read; only ML Kit, only for a
+            // doubtful line, and only after a fast full-frame read. Heavy/native
+            // engines never perform extra inference.
+            val recognized = if (firstPassOptimization)
+                FirstPassLocalRecheck.improve(
+                    engine, processed, initial, sourceLang, angleNoiseGateDeg,
+                    SystemClock.elapsedRealtime() - beganOcr,
+                ) else initial
             // Shared text normalization (pipe-trim / UI-decoration / noise) for EVERY
             // engine — folds in passes that used to live only in the ML Kit adapter, so
             // Meiki/Paddle/manga-ocr get them too. LayoutAnalyzer.analyze (whose sole
@@ -136,7 +150,7 @@ object OcrPipeline {
         // a large page) blocked Main long enough to ANR.
         withRecognition(
             engineProvider, bitmap, sourceLang, screenshotWidth, recipe,
-            darkBackgroundProvider, regionPreFilter, angleNoiseGateDeg,
+            darkBackgroundProvider, regionPreFilter, angleNoiseGateDeg, firstPassOptimization,
         ) { rec ->
             if (rec.regions.isEmpty()) return@withRecognition null
             // Furigana demotion sits here, AFTER text normalization (the

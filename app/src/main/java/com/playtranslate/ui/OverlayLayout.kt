@@ -136,6 +136,7 @@ internal object OverlayLayout {
         targetStackable: Boolean = false,
         growEnabled: Boolean = false,
         minText: MinTextGrowth? = null,
+        experimentalFirstPass: Boolean = false,
     ): List<ResolvedBox> {
         val scaleX = displayW.toFloat() / screenshotW
         val scaleY = displayH.toFloat() / screenshotH
@@ -302,13 +303,16 @@ internal object OverlayLayout {
             MinTextLayout.grow(boxes, finalRects, modes, bound, avoid, growth)
         }
 
-        return boxes.indices.map {
+        val resolved = boxes.indices.map {
             ResolvedBox(
                 finalRects[it], modes[it], chips[it],
                 grownFrom = outcomes?.get(it)?.grownFrom,
                 floorPx = outcomes?.get(it)?.floorPx,
             )
         }
+        return if (experimentalFirstPass)
+            FirstPassLayoutOptimizer.refine(resolved, sourceRects, boxes)
+        else resolved
     }
 
     /** Same-angle slant-cluster carve tolerance (degrees): must exceed the

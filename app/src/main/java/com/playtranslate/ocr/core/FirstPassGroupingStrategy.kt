@@ -35,11 +35,17 @@ class FirstPassGroupingStrategy : GroupingStrategy {
         ctx: GroupingContext,
     ): List<ProposedGroup> {
         val baseline = production.group(regions, ctx)
-        // Keep all unspaced scripts, rotated boxes, and tiny reads on the
-        // calibrated path. The experiment targets line-wrapped UI descriptions.
-        if (!ctx.spacedScript || baseline.size < 2 || regions.size > 200) return baseline
+        // The experiment targets spaced-script UI descriptions; other scripts
+        // keep the corpus-tested FlowGraph result untouched.
+        if (!ctx.spacedScript || regions.size > 180) return baseline
 
-        val candidates = exploratory.group(regions, ctx)
+        // Three independent partitions of the ONE recognized frame. The
+        // calibrated FlowGraph is authoritative unless the other strategies
+        // supply whole-group coverage plus strong geometry/language evidence.
+        val candidates = if (baseline.size >= 2) (
+            exploratory.group(regions, ctx) +
+                DefaultGroupingStrategy().group(regions, ctx)
+            ) else emptyList()
         val owners = IdentityHashMap<RecognizedRegion, Int>()
         baseline.forEachIndexed { index, group ->
             group.regions.forEach { owners[it] = index }
@@ -50,42 +56,62 @@ class FirstPassGroupingStrategy : GroupingStrategy {
         for (candidate in candidates) {
             if (candidate.frame != null || candidate.regions.isEmpty()) continue
             val indices = candidate.regions.mapNotNull { owners[it] }.distinct()
-            if (indices.size != 2 || indices.any { it in used }) continue
-            val first = baseline[indices[0]]
-            val second = baseline[indices[1]]
+            if (indices.size !in 2..3 || indices.any { it in used }) continue
+            val parts = indices.sortedBy { boundsOf(baseline[it]).top }.map { baseline[it] }
+            val first = parts.first()
+            val second = parts.last()
             // Never consume part of a previously accepted group, change a
             // slanted group, or merge a candidate that did not cover both
             // original groups in their entirety.
-            if (first.frame != null || second.frame != null) continue
-            if (first.regions.size + second.regions.size != candidate.regions.size) continue
-            if (first.regions.any { it !in candidate.regions } ||
-                second.regions.any { it !in candidate.regions }) continue
-            if ((first.regions + second.regions).any {
+            if (parts.any { it.frame != null }) continue
+            if (parts.sumOf { it.regions.size } != candidate.regions.size) continue
+            if (parts.any { p -> p.regions.any { it !in candidate.regions } }) continue
+            if (parts.flatMap { it.regions }.any {
                     it.orientation != com.playtranslate.language.TextOrientation.HORIZONTAL
                 }) continue
-            val topIndex = indices.minBy { boundsOf(baseline[it]).top }
-            val bottomIndex = indices.first { it != topIndex }
-            val top = baseline[topIndex]
-            val bottom = baseline[bottomIndex]
-            if (!shouldMerge(
+            if (!parts.zipWithNext().all { (top, bottom) ->
+                shouldMerge(
                     top.regions.joinToString(" ") { it.text },
                     bottom.regions.joinToString(" ") { it.text },
                     boundsOf(top), boundsOf(bottom),
-                )) continue
+                )
+            }) continue
+            // Do not allow a many-to-one giant box even when the exploratory
+            // grouping groups several plausible neighbours.
+            val merged = boundsOf(candidate)
+            val maxHeight = parts.sumOf { boundsOf(it).height() }
+            if (merged.height() > maxHeight * 1.75f) continue
             used.addAll(indices)
-            // Keep the candidate's reading order but no inherited menu-column
-            // pin: these two units are a wrapped sentence, not menu items.
+            val topIndex = indices.minBy { boundsOf(baseline[it]).top }
             replacements[topIndex] = ProposedGroup(candidate.regions)
         }
 
-        if (replacements.isEmpty()) return baseline
-        return baseline.flatMapIndexed { i, group ->
+        val refined = if (replacements.isEmpty()) baseline
+            else baseline.flatMapIndexed { i, group ->
             when {
                 i in replacements -> listOf(replacements.getValue(i))
                 i in used -> emptyList()
                 else -> listOf(group)
             }
         }
+        return refined.flatMap { splitClearSectionHeadings(it) }
+    }
+
+    /** A menu title and a numbered description are distinct units even when
+     *  some OCR segmentation hypothesis erroneously joins them. */
+    private fun splitClearSectionHeadings(group: ProposedGroup): List<ProposedGroup> {
+        if (group.frame != null || group.regions.size < 2) return listOf(group)
+        val parts = group.regions
+        val cut = (1 until parts.size).firstOrNull { i ->
+            val t = parts[i].text.trim()
+            val previous = parts[i - 1].text.trim()
+            // English-like numbered UI paragraphs (e.g. 2-Piece Set).
+            Regex("^\\d+\\s*[-–]\\s*[\\p{L} ]{3,25}[:：]", RegexOption.IGNORE_CASE)
+                .containsMatchIn(t) &&
+                previous.none { it == ':' || it == '：' } &&
+                parts[i].box.bounds.top > parts[i - 1].box.bounds.top
+        } ?: return listOf(group)
+        return listOf(ProposedGroup(parts.take(cut)), ProposedGroup(parts.drop(cut)))
     }
 
     private fun boundsOf(group: ProposedGroup): Rect = Rect(

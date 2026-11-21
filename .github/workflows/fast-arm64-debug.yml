@@ -7,6 +7,7 @@ on:
       - feature/frosted-overlay-material-v2
       - feature/overlay-horizontal-expansion-no-dim
       - feature/first-pass-optimization-ab
+      - feature/first-pass-seven-stages
   workflow_dispatch:
 
 permissions:
@@ -112,12 +113,15 @@ jobs:
             ./gradlew :app:assembleDebug --build-cache --parallel --no-daemon --stacktrace
           fi
 
-      - name: Test overlay fade and horizontal expansion invariants
-        if: github.ref_name == 'feature/frosted-overlay-material-v2' || github.ref_name == 'feature/overlay-horizontal-expansion-no-dim' || github.ref_name == 'feature/first-pass-optimization-ab'
+      - name: Test overlay fade, first-pass vision, quality and layout
+        if: github.ref_name == 'feature/frosted-overlay-material-v2' || github.ref_name == 'feature/overlay-horizontal-expansion-no-dim' || github.ref_name == 'feature/first-pass-optimization-ab' || github.ref_name == 'feature/first-pass-seven-stages'
         run: |
           ./gradlew :app:testDebugUnitTest \
             --tests "com.playtranslate.ui.TranslationGlassMathTest" \
             --tests "com.playtranslate.ocr.core.FirstPassGroupingStrategyTest" \
+            --tests "com.playtranslate.FirstPassVisionTest" \
+            --tests "com.playtranslate.FirstPassDisplayGateTest" \
+            --tests "com.playtranslate.ui.FirstPassLayoutOptimizerTest" \
             --no-daemon --build-cache --parallel
 
       - name: Verify ABI and native binaries inside final APK
