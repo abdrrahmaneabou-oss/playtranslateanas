@@ -5,6 +5,7 @@ on:
     branches:
       - experiment/fast-arm64-native-cache
       - feature/frosted-overlay-material-v2
+      - feature/overlay-horizontal-expansion-no-dim
   workflow_dispatch:
 
 permissions:
