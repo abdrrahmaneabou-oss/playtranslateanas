@@ -1,6 +1,5 @@
 package com.playtranslate.ui
 
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
@@ -10,7 +9,6 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
-import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
@@ -21,9 +19,9 @@ import kotlin.math.roundToInt
  *
  *  - Transparency is exclusively the alpha of the sampled colour TINT:
  *    0 = 255/255 opaque, 100 = 0/255. It never changes blur strength.
- *  - Blur is a genuine colour average over a *clean game screenshot*.
- *    Unlike a solid white wash, the pixels remain the game's own palette.
- *  - Edge fading masks the entire material, but never the TextView glyphs.
+ *  - Tint retains each text box's sampled background colour.
+ *  - Horizontal extension is a percent of each individual text box's width.
+ *  - Edge fading affects only this material, never the sharp glyphs.
  *
  * Note: an Android TYPE_APPLICATION_OVERLAY window can still be globally
  * capped at alpha ~=0.8 to keep touch-through. This Drawable cannot and
@@ -34,10 +32,7 @@ internal class TranslationBackdropDrawable(
     private val transparency: Int,
     private val rounded: Boolean,
     private val edgeFade: Int,
-    private val blurredFrame: Bitmap?,
-    private val screenBounds: RectF,
-    private val screenWidth: Int,
-    private val screenHeight: Int,
+    private val horizontalExpansionPercent: Int,
     private val density: Float,
 ) : Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
@@ -50,44 +45,27 @@ internal class TranslationBackdropDrawable(
     private var featherShaders: Array<Shader>? = null
 
     override fun draw(canvas: Canvas) {
-        val w = bounds.width().toFloat()
+        val originalWidth = bounds.width().toFloat()
         val h = bounds.height().toFloat()
-        if (w <= 0f || h <= 0f) return
+        if (originalWidth <= 0f || h <= 0f) return
+        val extraX = TranslationGlassMath.horizontalOverhang(originalWidth, horizontalExpansionPercent)
+        val w = originalWidth + 2f * extraX
 
         // DST_OUT must only erase *this* background, never already-drawn
         // game overlays or the glyphs which TextView draws after background.
         val layer = if (edgeFade > 0) {
             canvas.saveLayer(
-                bounds.left.toFloat(), bounds.top.toFloat(),
-                bounds.right.toFloat(), bounds.bottom.toFloat(), null,
+                bounds.left.toFloat() - extraX, bounds.top.toFloat(),
+                bounds.right.toFloat() + extraX, bounds.bottom.toFloat(), null,
             )
         } else canvas.save()
-        canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+        canvas.translate(bounds.left.toFloat() - extraX, bounds.top.toFloat())
 
         if (rounded) {
             clipping.reset()
             val radius = minOf(14f * density, minOf(w, h) * 0.48f)
             clipping.addRoundRect(0f, 0f, w, h, radius, radius, Path.Direction.CW)
             canvas.clipPath(clipping)
-        }
-
-        // Render ONLY at strictly positive blur. At 0 there is no screenshot
-        // paint of any kind (not even an already-downsampled screenshot).
-        val backdrop = blurredFrame
-        if (backdrop != null && !backdrop.isRecycled &&
-            screenWidth > 0 && screenHeight > 0) {
-            val src = Rect(
-                (screenBounds.left * backdrop.width / screenWidth).roundToInt().coerceIn(0, backdrop.width),
-                (screenBounds.top * backdrop.height / screenHeight).roundToInt().coerceIn(0, backdrop.height),
-                (screenBounds.right * backdrop.width / screenWidth).roundToInt().coerceIn(0, backdrop.width),
-                (screenBounds.bottom * backdrop.height / screenHeight).roundToInt().coerceIn(0, backdrop.height),
-            )
-            if (src.right > src.left && src.bottom > src.top) {
-                paint.shader = null
-                paint.color = Color.WHITE
-                paint.alpha = drawableAlpha
-                canvas.drawBitmap(backdrop, src, RectF(0f, 0f, w, h), paint)
-            }
         }
 
         val alpha = (TranslationGlassMath.tintAlpha(transparency) *
@@ -155,105 +133,3 @@ internal class TranslationBackdropDrawable(
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }
 
-/**
- * A true, monotonic colour-mixing blur, not a diluted white overlay. Three
- * separable box passes approximate a Gaussian while each pass is O(w*h)
- * irrespective of radius. The cached frame is 960px on its long side, giving
- * enough image detail for low blur and a soft droplet-glass look at high blur.
- *
- * This runs only after a captured backdrop changes or after a coalesced slider
- * update; glyphs/outline remain outside this bitmap and never get blurred.
- */
-internal object TranslationBackdropPixels {
-    const val MAX_SAMPLE_LONG_SIDE = 960
-
-    fun blur(frame: Bitmap, percent: Int): Bitmap? {
-        if (frame.isRecycled || frame.width < 1 || frame.height < 1) return null
-        val radius = TranslationGlassMath.blurRadius(percent)
-        if (radius == 0f) return null
-
-        val scale = minOf(1f, MAX_SAMPLE_LONG_SIDE.toFloat() /
-            maxOf(frame.width, frame.height))
-        val w = (frame.width * scale).roundToInt().coerceAtLeast(1)
-        val h = (frame.height * scale).roundToInt().coerceAtLeast(1)
-        val source = if (w == frame.width && h == frame.height) frame
-            else Bitmap.createScaledBitmap(frame, w, h, true)
-
-        try {
-            val pixels = IntArray(w * h)
-            source.getPixels(pixels, 0, w, 0, 0, w, h)
-            var input = pixels
-            var output = IntArray(pixels.size)
-            repeat(3) {
-                horizontal(input, output, w, h, radius)
-                val tmp = input; input = output; output = tmp
-                vertical(input, output, w, h, radius)
-                val tmp2 = input; input = output; output = tmp2
-            }
-            return Bitmap.createBitmap(input, w, h, Bitmap.Config.ARGB_8888)
-        } finally {
-            if (source !== frame) source.recycle()
-        }
-    }
-
-    /** Fractional box-filter border weights give 101 gradual intensities.
-     *  A running sum makes each separable pass linear in pixel count. */
-    private fun horizontal(src: IntArray, dst: IntArray, w: Int, h: Int, radius: Float) {
-        val whole = radius.toInt()
-        val fraction = radius - whole
-        val divisor = 2f * whole + 1f + 2f * fraction
-        for (y in 0 until h) {
-            val start = y * w
-            var rs = 0; var gs = 0; var bs = 0
-            for (k in -whole..whole) {
-                val p = src[start + k.coerceIn(0, w - 1)]
-                rs += Color.red(p); gs += Color.green(p); bs += Color.blue(p)
-            }
-            for (x in 0 until w) {
-                val l = src[start + (x - whole - 1).coerceIn(0, w - 1)]
-                val r = src[start + (x + whole + 1).coerceIn(0, w - 1)]
-                val red = ((rs + fraction * (Color.red(l) + Color.red(r))) / divisor)
-                    .roundToInt().coerceIn(0, 255)
-                val green = ((gs + fraction * (Color.green(l) + Color.green(r))) / divisor)
-                    .roundToInt().coerceIn(0, 255)
-                val blue = ((bs + fraction * (Color.blue(l) + Color.blue(r))) / divisor)
-                    .roundToInt().coerceIn(0, 255)
-                dst[start + x] = Color.rgb(red, green, blue)
-                val leaving = src[start + (x - whole).coerceIn(0, w - 1)]
-                val entering = src[start + (x + whole + 1).coerceIn(0, w - 1)]
-                rs += Color.red(entering) - Color.red(leaving)
-                gs += Color.green(entering) - Color.green(leaving)
-                bs += Color.blue(entering) - Color.blue(leaving)
-            }
-        }
-    }
-
-    private fun vertical(src: IntArray, dst: IntArray, w: Int, h: Int, radius: Float) {
-        val whole = radius.toInt()
-        val fraction = radius - whole
-        val divisor = 2f * whole + 1f + 2f * fraction
-        for (x in 0 until w) {
-            var rs = 0; var gs = 0; var bs = 0
-            for (k in -whole..whole) {
-                val p = src[k.coerceIn(0, h - 1) * w + x]
-                rs += Color.red(p); gs += Color.green(p); bs += Color.blue(p)
-            }
-            for (y in 0 until h) {
-                val l = src[(y - whole - 1).coerceIn(0, h - 1) * w + x]
-                val r = src[(y + whole + 1).coerceIn(0, h - 1) * w + x]
-                val red = ((rs + fraction * (Color.red(l) + Color.red(r))) / divisor)
-                    .roundToInt().coerceIn(0, 255)
-                val green = ((gs + fraction * (Color.green(l) + Color.green(r))) / divisor)
-                    .roundToInt().coerceIn(0, 255)
-                val blue = ((bs + fraction * (Color.blue(l) + Color.blue(r))) / divisor)
-                    .roundToInt().coerceIn(0, 255)
-                dst[y * w + x] = Color.rgb(red, green, blue)
-                val leaving = src[(y - whole).coerceIn(0, h - 1) * w + x]
-                val entering = src[(y + whole + 1).coerceIn(0, h - 1) * w + x]
-                rs += Color.red(entering) - Color.red(leaving)
-                gs += Color.green(entering) - Color.green(leaving)
-                bs += Color.blue(entering) - Color.blue(leaving)
-            }
-        }
-    }
-}
