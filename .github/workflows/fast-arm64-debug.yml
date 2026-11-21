@@ -111,8 +111,8 @@ jobs:
             ./gradlew :app:assembleDebug --build-cache --parallel --no-daemon --stacktrace
           fi
 
-      - name: Test glass material slider invariants
-        if: github.ref_name == 'feature/frosted-overlay-material-v2'
+      - name: Test overlay fade and horizontal expansion invariants
+        if: github.ref_name == 'feature/frosted-overlay-material-v2' || github.ref_name == 'feature/overlay-horizontal-expansion-no-dim'
         run: |
           ./gradlew :app:testDebugUnitTest \
             --tests "com.playtranslate.ui.TranslationGlassMathTest" \
