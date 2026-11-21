@@ -236,8 +236,13 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
     }
 
     private val dimPaint = Paint().apply {
-        // Match the region-editing view's dim (alpha 200) — a little less see-through.
+        // Normal quick menu and region picker keep the original strong dim.
         color = Color.argb(200, 0, 0, 0)
+    }
+    private val appearancePreviewDimPaint = Paint().apply {
+        // The live-style editor must leave translated game text visible so
+        // slider changes can be judged against the actual colours on screen.
+        color = Color.argb(88, 0, 0, 0)
     }
     private val clearPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
@@ -863,6 +868,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
      *  ease-out animation (and back). Panel content is added later. */
     private fun toggleExpanded() {
         expanded = !expanded
+        invalidate() // Repaint the game's live preview with a lighter dim.
         updateSettingsButton()
 
         val startRight = rightStack.width.takeIf { it > 0 } ?: collapsedRightWidthPx
@@ -1267,6 +1273,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
             // Card-colored base border + accent dashes (screen-space stable)
             drawDashedBorder(canvas, sel)
         } else {
+            val paint = if (expanded) appearancePreviewDimPaint else dimPaint
             val region = activeRegion
             if (region != null && !region.isFullScreen) {
                 // Show the active capture region as a clear window
@@ -1276,14 +1283,14 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
                     region.left * w, region.top * h,
                     region.right * w, region.bottom * h
                 )
-                canvas.drawRect(0f, 0f, w, h, dimPaint)
+                canvas.drawRect(0f, 0f, w, h, paint)
                 canvas.drawRect(regionRect, regionFillPaint)
                 // Same separated-line boundary as region editing. The region's
                 // name pill and clear button are child views
                 // ([showRegionChrome]) — the button has to be tappable.
                 drawDashedBorder(canvas, regionRect)
             } else {
-                canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), dimPaint)
+                canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
             }
         }
     }
