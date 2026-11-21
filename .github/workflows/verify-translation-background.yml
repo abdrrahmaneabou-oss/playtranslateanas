@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/overlay-background-controls
+      - feature/arm64-language-backup
   workflow_dispatch:
 
 jobs:
@@ -38,6 +39,16 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Check ARM64-only APK libraries
+        run: |
+          APK="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)"
+          test -n "$APK"
+          unzip -Z -1 "$APK" | grep '^lib/arm64-v8a/' >/dev/null
+          if unzip -Z -1 "$APK" | grep -q '^lib/armeabi-v7a/'; then
+            echo "ERROR: 32-bit native libraries remain in APK"
+            exit 1
+          fi
+          echo "ARM64 libraries present; no 32-bit native slice."
       - name: Publish debug APK
         if: success()
         uses: actions/upload-artifact@v4

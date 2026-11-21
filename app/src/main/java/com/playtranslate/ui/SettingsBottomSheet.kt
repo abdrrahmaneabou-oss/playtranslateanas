@@ -301,6 +301,21 @@ class SettingsBottomSheet : DialogFragment() {
             settingsScrollView.post { tryRestore() }
         }
 
+        // Standalone language backup/import screen. This shortcut is bound
+        // here because it has its own SAF ActivityResult workflow and no VM
+        // state to render.
+        view.findViewById<View>(R.id.rowConfigLanguageBackup).apply {
+            findViewById<android.widget.TextView>(R.id.hubRowTitle)
+                .setText(R.string.backup_language_title)
+            findViewById<android.widget.TextView>(R.id.hubRowSummary)
+                .setText(R.string.backup_settings_subtitle)
+            findViewById<android.widget.ImageView>(R.id.hubRowIcon)
+                .setImageResource(R.drawable.ic_export_notes)
+            setOnClickListener {
+                startActivity(android.content.Intent(requireContext(), LanguageBackupActivity::class.java))
+            }
+        }
+
         // Create and bind the renderer
         val r = SettingsRenderer(
             root = view,

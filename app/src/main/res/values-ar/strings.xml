@@ -2197,4 +2197,24 @@
     <string name="settings_overlay_bg_round_subtitle">تفعيل أو تعطيل الزوايا المستديرة لخلفيات الترجمة.</string>
     <string name="settings_overlay_bg_fade_title">تلاشي الحواف</string>
     <string name="settings_overlay_bg_fade_subtitle">تخفيف ظهور المستطيل تدريجياً قرب حوافه.</string>
+    <string name="backup_language_title">النسخ الاحتياطية للغات</string>
+    <string name="backup_settings_subtitle">حفظ واستعادة ملفات العربية والإنجليزية</string>
+    <string name="backup_language_explanation">اختر مجلداً خارج التطبيق. عند تنزيل حزمة لغة سيحفظ التطبيق نسخة احتياطية فيه تلقائياً. بعد إعادة التثبيت امنح الوصول إلى المجلد مجدداً، واستورد الملف المضغوط دون تنزيل القاموس مرة أخرى. قد تتطلب بعض نماذج Google إعادة تنزيل منفصلة.</string>
+    <string name="backup_choose_folder">اختيار مجلد النسخ الاحتياطية</string>
+    <string name="backup_no_folder">لم يتم اختيار مجلد خارجي</string>
+    <string name="backup_folder_saved">تم منح الوصول إلى مجلد النسخ</string>
+    <string name="backup_folder_failed">تعذر الوصول إلى المجلد المحدد</string>
+    <string name="backup_save_header">حفظ الحزم المثبتة الآن</string>
+    <string name="backup_save_english">حفظ نسخة الإنجليزية</string>
+    <string name="backup_save_arabic">حفظ نسخة العربية</string>
+    <string name="backup_restore_header">استعادة نسخة محفوظة</string>
+    <string name="backup_restore_hint">بطاقتا ENGLISH EXPORT وARABIC EXPORT تفتحان اختيار ملف لاستيراد النسخة المحفوظة، مع التحقق من سلامتها قبل التثبيت.</string>
+    <string name="backup_working">جارٍ تجهيز النسخة الاحتياطية…</string>
+    <string name="backup_restoring">جارٍ فحص النسخة واستعادتها…</string>
+    <string name="backup_saved_as">حُفظ الملف: %1$s</string>
+    <string name="backup_failed_reason">فشلت العملية: %1$s</string>
+    <string name="backup_first_title">احتفظ بملفات اللغات</string>
+    <string name="backup_first_explanation">اختر مجلداً خارج PlayTranslate لحفظ ملفات العربية والإنجليزية بعد تنزيلها، واستعادتها بعد إعادة تثبيت التطبيق حتى لو تغير توقيعه. هذا الإذن اختياري.</string>
+    <string name="backup_open_settings">استيراد نسخة</string>
+    <string name="backup_first_restore_now">تم اختيار المجلد. هل تريد استعادة ملفات العربية أو الإنجليزية المحفوظة الآن؟</string>
 </resources>

@@ -144,6 +144,11 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:theme="@style/Theme.PlayTranslate" />
 
+        <!-- SAF language pack backup/restore; also callable before onboarding. -->
+        <activity
+            android:name=".ui.LanguageBackupActivity"
+            android:exported="false" />
+
         <!-- DeepL API key entry sub-screen (launched from Settings → Translation Service). -->
         <activity
             android:name=".ui.DeepLSettingsActivity"

@@ -28,15 +28,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // arm64-v8a + armeabi-v7a. arm64 is the real target — every
-        // post-2019 Play-Store-eligible device is arm64. armeabi-v7a is the
-        // compatibility tier (ML Kit translation works on 32-bit devices),
-        // but :mnn intentionally ships arm64 only, so on a 32-bit slice
-        // there are NO MNN libs at all and the Settings UI hides the MNN
-        // backend rows via OnDeviceLlmBackend.supportsRequiredAbi(). x86_64
-        // dropped — re-add for emulator testing if needed.
+        // Personal REDMAGIC arm64 build: exclude the 32-bit slice from the
+        // output APK, without removing any arm64 library, OCR engine or model.
+        // :mnn and :bergamot already build arm64 only.
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a")
         }
 
         buildConfigField("String", "DEEPL_API_KEY",
@@ -217,6 +213,7 @@ dependencies {
     implementation(project(":bergamot"))
 
     implementation(libs.androidx.core.ktx)
+    implementation("androidx.documentfile:documentfile:1.0.1")
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
