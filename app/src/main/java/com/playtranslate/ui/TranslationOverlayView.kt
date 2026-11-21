@@ -248,6 +248,9 @@ class TranslationOverlayView(
     /** Cached full-view pinhole mask bitmap. Created on size change, recycled on detach. */
     private var pinholeMaskBitmap: Bitmap? = null
 
+    /** Snapshot owned by this view, never the source's recycled frame. */
+    private var blurredBackdrop: Bitmap? = null
+
     private val dstOutPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT)
     }
@@ -268,12 +271,26 @@ class TranslationOverlayView(
         screenshotW: Int, screenshotH: Int,
         authoritativeBounds: Boolean = false,
         growthLimits: GrowthLimits = GrowthLimits.NONE,
+        backdropFrame: Bitmap? = null,
     ) {
+        val visualInputsChanged = this.boxes != boxes ||
+            cropOffsetX != cropLeft || cropOffsetY != cropTop ||
+            this.screenshotW != screenshotW || this.screenshotH != screenshotH
+        var backdropChanged = false
+        if (renderConfig.backgroundBlur > 0 && backdropFrame != null &&
+            !backdropFrame.isRecycled && (visualInputsChanged || blurredBackdrop == null)) {
+            TranslationBackdropPixels.blur(backdropFrame, renderConfig.backgroundBlur)?.let { next ->
+                val previous = blurredBackdrop
+                blurredBackdrop = next
+                previous?.recycle()
+                backdropChanged = true
+            }
+        }
         val limitsChanged = minTextRaised && growthLimits != this.growthLimits
         this.growthLimits = growthLimits
 
         // Skip everything if content is identical (avoids flash on false-positive recaptures)
-        if (!limitsChanged && this.boxes == boxes && cropOffsetX == cropLeft && cropOffsetY == cropTop
+        if (!limitsChanged && !backdropChanged && this.boxes == boxes && cropOffsetX == cropLeft && cropOffsetY == cropTop
             && this.screenshotW == screenshotW && this.screenshotH == screenshotH
         ) return
 
@@ -314,7 +331,7 @@ class TranslationOverlayView(
                         !drawExtension(a).contentEquals(drawExtension(b))
                 }
             this.boxes = boxes
-            if ((visualChanged || limitsChanged) && width > 0 && height > 0) {
+            if ((visualChanged || limitsChanged || backdropChanged) && width > 0 && height > 0) {
                 rebuildChildren()
             }
             return
@@ -370,6 +387,8 @@ class TranslationOverlayView(
         shimmerAnimator = null
         pinholeMaskBitmap?.recycle()
         pinholeMaskBitmap = null
+        blurredBackdrop?.recycle()
+        blurredBackdrop = null
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -635,6 +654,24 @@ class TranslationOverlayView(
                     }
                 }
 
+                // Preserve the original pixels with untouched defaults.
+                // Only the backdrop changes; text and outlines remain sharp.
+                val styled = renderConfig.backgroundTransparency != 12 ||
+                    renderConfig.backgroundBlur > 0 ||
+                    renderConfig.backgroundRounded || renderConfig.backgroundEdgeFade > 0
+                if (styled) {
+                    child.background = TranslationBackdropDrawable(
+                        fillColor = fillColor,
+                        transparency = renderConfig.backgroundTransparency,
+                        rounded = renderConfig.backgroundRounded,
+                        edgeFade = renderConfig.backgroundEdgeFade,
+                        blurredFrame = blurredBackdrop,
+                        screenBounds = rect,
+                        screenWidth = width,
+                        screenHeight = height,
+                        density = dp,
+                    )
+                }
                 child.setTag(R.id.tag_bg_color, box.bgColor)
 
                 if (mode == RenderMode.ROTATE) {

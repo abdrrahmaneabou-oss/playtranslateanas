@@ -876,6 +876,7 @@ class OverlayUiController(
         renderConfig: OverlayRenderConfig = OverlayRenderConfig.DEFAULT,
         authoritativeBounds: Boolean = false,
         growthLimits: GrowthLimits = GrowthLimits.NONE,
+        backdropFrame: Bitmap? = null,
     ) {
         // Overlay is appearing — dismiss the loading spinner across all icons.
         // Through the service rather than straight at the icons: the service
@@ -907,6 +908,7 @@ class OverlayUiController(
             existing.setBoxes(
                 boxes, cropLeft, cropTop, screenshotW, screenshotH, authoritativeBounds,
                 growthLimits = growthLimits,
+                backdropFrame = backdropFrame,
             )
             return
         }
@@ -980,7 +982,8 @@ class OverlayUiController(
                 { CaptureService.instance?.dismissLiveOverlay(displayId) }
             } else null,
         ).apply {
-            setBoxes(boxes, cropLeft, cropTop, screenshotW, screenshotH, growthLimits = growthLimits)
+            setBoxes(boxes, cropLeft, cropTop, screenshotW, screenshotH,
+                growthLimits = growthLimits, backdropFrame = backdropFrame)
         }
         val mainParams = buildOverlayLayoutParams(
             touchable = mainTouchable,

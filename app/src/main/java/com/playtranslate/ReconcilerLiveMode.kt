@@ -533,7 +533,7 @@ class ReconcilerLiveMode(
                 // and once after it goes, and the view relayouts only if the
                 // limits it drew with changed.
                 val unboxed = GrowthLimits.unboxedText(groups.map { it.drawBounds }, kept).isNotEmpty()
-                if (overlayHidden || unboxed || shownUnboxedText) showBoxes(kept, groups)
+                if (overlayHidden || unboxed || shownUnboxedText) showBoxes(kept, groups, raw)
                 return pacing(prefs)
             }
 
@@ -554,7 +554,7 @@ class ReconcilerLiveMode(
                         presenter.emitNoText(read.attribution)
                     }
                 } else {
-                    showBoxes(kept, groups)
+                    showBoxes(kept, groups, raw)
                     presenter.emitApplied(
                         kept, pipeline?.ocrResult,
                         frame.includesSystemUi, frame.includesOwnOverlays,
@@ -585,7 +585,7 @@ class ReconcilerLiveMode(
                 toTranslate, frame, cropLeft, cropTop,
                 onPartial = { partial ->
                     cachedBoxes = kept + partial
-                    showBoxes(kept + partial, groups)
+                    showBoxes(kept + partial, groups, raw)
                 },
                 // The reader's translations, for the regions it would
                 // translate anyway, and only where a region's text is its
@@ -612,7 +612,7 @@ class ReconcilerLiveMode(
                 }
             }
             cachedBoxes = kept + finalAnchors
-            showBoxes(kept + finalAnchors, groups)
+            showBoxes(kept + finalAnchors, groups, raw)
             presenter.emitApplied(
                 kept + finalAnchors, pipeline?.ocrResult,
                 frame.includesSystemUi, frame.includesOwnOverlays,
@@ -648,7 +648,8 @@ class ReconcilerLiveMode(
      *  this look read: the minimum-text-size growth stays inside the crop
      *  and clear of the text no anchor covers (the anchors, not the display
      *  boxes: a furigana band never covers its line, and never grows). */
-    private fun showBoxes(anchors: List<TextBox>, groups: List<OcrManager.OcrGroup>) {
+    private fun showBoxes(anchors: List<TextBox>, groups: List<OcrManager.OcrGroup>,
+        backdropFrame: Bitmap? = null) {
         overlayHidden = false
         if (!presenter.rendersOverlays) return
         val avoid = GrowthLimits.unboxedText(groups.map { it.drawBounds }, anchors)
@@ -660,6 +661,7 @@ class ReconcilerLiveMode(
             // Reconciler-tier bounds are hysteresis-filtered upstream — the
             // view must not fuzzy-hold children in place (drift lag bug).
             authoritativeBounds = true,
+            backdropFrame = backdropFrame,
             growthLimits = GrowthLimits(
                 bounds = if (cropWidth > 0 && cropHeight > 0) Rect(0, 0, cropWidth, cropHeight) else null,
                 avoid = avoid,

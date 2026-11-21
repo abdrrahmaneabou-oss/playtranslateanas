@@ -1264,6 +1264,9 @@ class PinholeOverlayMode(
         service.showLiveOverlay(
             boxes, left, top, sw, sh, pinholeMode = true, displayId = displayId,
             growthLimits = growthLimits,
+            // The clean reference contains reconstructed game pixels, not the
+            // previous screen overlay. It is optional on the first capture.
+            backdropFrame = cleanRefBitmap,
         )
         // Wait for children to be laid out before snapshotting. addOverlayWindow
         // is async; onSizeChanged posts rebuildChildren; rebuildChildren adds
@@ -1564,14 +1567,19 @@ class PinholeOverlayMode(
                 // exclusion is footprint-shaped for rotated boxes. Upright
                 // chips fill their whole rect opaque, so this never skips
                 // for them.
-                if (Color.alpha(ovPx) != 255) continue
+                // Styled fills can be partially transparent, including
+                // feathered edges. Very faint pixels are handled by the
+                // outside gate; visible pixels use their actual alpha in
+                // the 50/50 pinhole prediction.
+                val drawnAlpha = Color.alpha(ovPx) / 255f
+                if (drawnAlpha < 0.4f) continue
                 totalPinholes++
                 val refPx = refPixels[i]
                 val rawPx = rawPixels[i]
-                // predicted = clean_ref * 0.5 + overlay_rendered * 0.5
-                val predR = (Color.red(refPx) + Color.red(ovPx)) / 2
-                val predG = (Color.green(refPx) + Color.green(ovPx)) / 2
-                val predB = (Color.blue(refPx) + Color.blue(ovPx)) / 2
+                val mix = drawnAlpha * 0.5f
+                val predR = (Color.red(refPx) * (1f - mix) + Color.red(ovPx) * mix).toInt()
+                val predG = (Color.green(refPx) * (1f - mix) + Color.green(ovPx) * mix).toInt()
+                val predB = (Color.blue(refPx) * (1f - mix) + Color.blue(ovPx) * mix).toInt()
                 val dr = kotlin.math.abs(Color.red(rawPx) - predR)
                 val dg = kotlin.math.abs(Color.green(rawPx) - predG)
                 val db = kotlin.math.abs(Color.blue(rawPx) - predB)

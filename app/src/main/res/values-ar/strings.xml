@@ -2189,4 +2189,12 @@
     <string name="inflection_volitional">العزم</string>
     <string name="inflection_imperative">الأمر</string>
     <string name="inflection_more">+<xliff:g id="count" example="2">%1$d</xliff:g> أخرى</string>
+    <string name="settings_overlay_bg_transparency_title">شفافية خلفية الترجمة</string>
+    <string name="settings_overlay_bg_transparency_subtitle">0٪ معتم؛ 100٪ بلا لون خلفية.</string>
+    <string name="settings_overlay_bg_blur_title">ضبابية الخلفية</string>
+    <string name="settings_overlay_bg_blur_subtitle">تمويه صورة اللعبة خلف الترجمة؛ 0٪ يعطّله.</string>
+    <string name="settings_overlay_bg_round_title">تدوير الزوايا</string>
+    <string name="settings_overlay_bg_round_subtitle">تفعيل أو تعطيل الزوايا المستديرة لخلفيات الترجمة.</string>
+    <string name="settings_overlay_bg_fade_title">تلاشي الحواف</string>
+    <string name="settings_overlay_bg_fade_subtitle">تخفيف ظهور المستطيل تدريجياً قرب حوافه.</string>
 </resources>
