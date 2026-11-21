@@ -17,6 +17,14 @@ internal object TranslationGlassMath {
     fun horizontalOverhang(boxWidth: Float, percentPerSide: Int): Float =
         boxWidth.coerceAtLeast(0f) * percentPerSide.coerceIn(1, 15) / 100f
 
+    /** The horizontal fading band must end BEFORE the source rectangle starts,
+     *  so the original game glyphs never appear through a feathered side.
+     *  Vertical fading still uses the pre-existing independent feather width. */
+    fun horizontalFeatherWidth(extendedWidth: Float, sideOverhang: Float, fadePercent: Int): Float {
+        if (fadePercent <= 0 || sideOverhang <= 0f) return 0f
+        return minOf(extendedWidth * featherFraction(fadePercent), sideOverhang).coerceAtLeast(0f)
+    }
+
     /** Broad feather: even 10% spreads over ~19% of either side, while
      *  100% still reserves a visible central core for text and pinhole
      *  change detection. No hard cutoff is introduced inside the band. */
