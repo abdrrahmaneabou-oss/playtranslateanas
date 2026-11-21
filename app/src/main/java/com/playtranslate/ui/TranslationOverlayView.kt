@@ -110,7 +110,7 @@ class TranslationOverlayView(
      *  view-reuse guard can compare it: it derives from user-mutable prefs, so
      *  a change must force a fresh view (a ctor val can't be refreshed by
      *  [setBoxes]). */
-    val renderConfig: OverlayRenderConfig = OverlayRenderConfig.DEFAULT,
+    renderConfig: OverlayRenderConfig = OverlayRenderConfig.DEFAULT,
     /** When non-null, this overlay handles its own dismissal. ACTION_DOWN
      *  touches dismiss immediately (race-safe against the hold-release
      *  callback and second-finger taps during a hold), and TalkBack's
@@ -167,12 +167,17 @@ class TranslationOverlayView(
         layoutDirection = LAYOUT_DIRECTION_LTR
     }
 
+    var renderConfig: OverlayRenderConfig = renderConfig
+        private set
+
     private val dp = context.resources.displayMetrics.density
 
     /** The autosize floor. It IS the minimum text size's default, so the
      *  setting's resting value means "overlays as they always were". */
     private val minTextSizeSp = Prefs.OVERLAY_MIN_TEXT_SP_DEFAULT
-    private val maxTextSizeSp = 200
+    // Upper safety limit; the per-box OCR glyph scale below normally yields
+    // a far smaller limit (dialogue choices stay around their source size).
+    private val maxTextSizeSp = 96
     /** Capped autosize ceiling (sp) for GROW boxes — keeps the translation a small, centred
      *  block in the tall on-source background instead of ballooning to fill the column height. */
     private val growMaxTextSizeSp = 18
@@ -245,6 +250,24 @@ class TranslationOverlayView(
     private val skeletonBars = mutableListOf<View>()
     private var shimmerAnimator: ValueAnimator? = null
 
+    /** A small clean frame sample retained while the quick menu is up; this
+     *  allows blur intensity to change without capturing again. */
+    private var cleanBackdropSample: Bitmap? = null
+
+    /** Repaint while the full-screen quick menu has captures paused. */
+    fun applyAppearanceConfig(next: OverlayRenderConfig) {
+        if (renderConfig == next) return
+        // The quick menu edits only appearance, but the same method safely
+        // handles a full config change by rebuilding children in place.
+        renderConfig = next
+        val oldBlur = blurredBackdrop
+        blurredBackdrop = cleanBackdropSample?.let {
+            TranslationBackdropPixels.blur(it, next.backgroundBlur)
+        }
+        oldBlur?.recycle()
+        if (width > 0 && height > 0) rebuildChildren()
+    }
+
     /** Cached full-view pinhole mask bitmap. Created on size change, recycled on detach. */
     private var pinholeMaskBitmap: Bitmap? = null
 
@@ -277,14 +300,21 @@ class TranslationOverlayView(
             cropOffsetX != cropLeft || cropOffsetY != cropTop ||
             this.screenshotW != screenshotW || this.screenshotH != screenshotH
         var backdropChanged = false
-        if (renderConfig.backgroundBlur > 0 && backdropFrame != null &&
-            !backdropFrame.isRecycled && (visualInputsChanged || blurredBackdrop == null)) {
-            TranslationBackdropPixels.blur(backdropFrame, renderConfig.backgroundBlur)?.let { next ->
-                val previous = blurredBackdrop
-                blurredBackdrop = next
-                previous?.recycle()
-                backdropChanged = true
+        if (backdropFrame != null && !backdropFrame.isRecycled &&
+            (visualInputsChanged || cleanBackdropSample == null)) {
+            val scale = minOf(1f, 288f / maxOf(backdropFrame.width, backdropFrame.height))
+            val sample = Bitmap.createScaledBitmap(backdropFrame,
+                (backdropFrame.width * scale).toInt().coerceAtLeast(1),
+                (backdropFrame.height * scale).toInt().coerceAtLeast(1), true)
+            val previousSample = cleanBackdropSample
+            cleanBackdropSample = if (sample === backdropFrame) sample.copy(Bitmap.Config.ARGB_8888, false) else sample
+            previousSample?.recycle()
+            val previous = blurredBackdrop
+            blurredBackdrop = cleanBackdropSample?.let {
+                TranslationBackdropPixels.blur(it, renderConfig.backgroundBlur)
             }
+            previous?.recycle()
+            backdropChanged = true
         }
         val limitsChanged = minTextRaised && growthLimits != this.growthLimits
         this.growthLimits = growthLimits
@@ -389,6 +419,8 @@ class TranslationOverlayView(
         pinholeMaskBitmap = null
         blurredBackdrop?.recycle()
         blurredBackdrop = null
+        cleanBackdropSample?.recycle()
+        cleanBackdropSample = null
     }
 
     override fun dispatchDraw(canvas: Canvas) {
@@ -595,7 +627,20 @@ class TranslationOverlayView(
                     RenderMode.SOURCE_ANGLE -> angledW
                     else -> rectW
                 }
-                val autoMax = unbreakableFitMaxSp(box.translatedText, wrapWidthPx, baseMax)
+                val sourceLineHeight = box.bounds.height().toFloat() /
+                    box.lineCount.coerceAtLeast(1)
+                val peerHeight = TranslationFontGuard.medianPeerHeight(box, measured)
+                val sourceCap = if (mode == RenderMode.ROTATE || mode == RenderMode.SOURCE_ANGLE)
+                    baseMax else TranslationFontGuard.sourceCeilingSp(
+                        sourceLineHeightPx = sourceLineHeight,
+                        displayScaleY = scaleY,
+                        scaledDensity = context.resources.displayMetrics.scaledDensity,
+                        minSp = minTextSizeSp,
+                        globalMaxSp = baseMax,
+                        peerMedianHeightPx = peerHeight,
+                    )
+                val autoMax = unbreakableFitMaxSp(box.translatedText, wrapWidthPx,
+                    minOf(baseMax, sourceCap))
 
                 val child: View = when {
                     box.translatedText.isEmpty() -> {

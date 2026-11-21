@@ -2120,7 +2120,10 @@ class OverlayUiController(
 
         // Suppress live captures while menu is open.
         CaptureService.instance?.holdActive = true
-        hideTranslationOverlay()
+        // Keep LIVE translation visible beneath the menu for instant visual
+        // preview of the four appearance sliders. Captures remain paused, so
+        // the menu cannot pollute OCR. Inactive/one-shot previews still hide.
+        if (CaptureService.instance?.isLive != true) hideTranslationOverlay()
         endCaptures(CaptureTakeover.QUICK_MENU)
 
         val hintKind = SourceLanguageProfiles[prefs.sourceLangId].hintTextKind
@@ -2184,6 +2187,24 @@ class OverlayUiController(
             // / Auto Pinyin / Auto Translate); it's hidden while the panel is
             // open and shows the new label on collapse.
             menu.hintModeLabel = hintModeLabelFor(next, hintKind)
+        }
+        menu.onAppearanceChanged = { setting, value ->
+            val p = Prefs(context)
+            when (setting) {
+                com.playtranslate.ui.OverlayAppearanceSetting.TRANSPARENCY ->
+                    p.overlayBackgroundTransparency = value
+                com.playtranslate.ui.OverlayAppearanceSetting.BLUR ->
+                    p.overlayBackgroundBlur = value
+                com.playtranslate.ui.OverlayAppearanceSetting.EDGE_FADE ->
+                    p.overlayBackgroundEdgeFade = value
+                com.playtranslate.ui.OverlayAppearanceSetting.ROUNDED ->
+                    p.overlayBackgroundRounded = value != 0
+            }
+            // Repaint the retained live translation without a new OCR frame,
+            // a network translation, an overlay-window recreate, or touching
+            // the underlying game's input dispatch.
+            val appearance = OverlayRenderConfig.from(p)
+            translationOverlayHandles.values.forEach { it.applyAppearanceConfig(appearance) }
         }
         menu.onOpenApp = {
             dismissFloatingMenu()

@@ -5,6 +5,7 @@ on:
     branches:
       - feature/overlay-background-controls
       - feature/arm64-language-backup
+      - feature/live-floating-style-dialogue-guard
   workflow_dispatch:
 
 jobs:
@@ -39,6 +40,12 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify typography and dialogue-choice regressions
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests "com.playtranslate.ui.TranslationFontGuardTest" \
+            --tests "com.playtranslate.ocr.core.SpacedDialogueChoicesTest" \
+            --no-daemon --stacktrace
       - name: Check ARM64-only APK libraries
         run: |
           APK="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)"
