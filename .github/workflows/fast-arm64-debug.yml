@@ -6,6 +6,7 @@ on:
       - experiment/fast-arm64-native-cache
       - feature/frosted-overlay-material-v2
       - feature/overlay-horizontal-expansion-no-dim
+      - feature/first-pass-optimization-ab
   workflow_dispatch:
 
 permissions:
@@ -112,10 +113,11 @@ jobs:
           fi
 
       - name: Test overlay fade and horizontal expansion invariants
-        if: github.ref_name == 'feature/frosted-overlay-material-v2' || github.ref_name == 'feature/overlay-horizontal-expansion-no-dim'
+        if: github.ref_name == 'feature/frosted-overlay-material-v2' || github.ref_name == 'feature/overlay-horizontal-expansion-no-dim' || github.ref_name == 'feature/first-pass-optimization-ab'
         run: |
           ./gradlew :app:testDebugUnitTest \
             --tests "com.playtranslate.ui.TranslationGlassMathTest" \
+            --tests "com.playtranslate.ocr.core.FirstPassGroupingStrategyTest" \
             --no-daemon --build-cache --parallel
 
       - name: Verify ABI and native binaries inside final APK

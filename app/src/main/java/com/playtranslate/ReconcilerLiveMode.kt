@@ -584,8 +584,13 @@ class ReconcilerLiveMode(
             val finalAnchors = presenter.present(
                 toTranslate, frame, cropLeft, cropTop,
                 onPartial = { partial ->
-                    cachedBoxes = kept + partial
-                    showBoxes(kept + partial, groups, raw)
+                    // Experiment: do not expose skeletons or incremental backend
+                    // deliveries. The legacy branch remains byte-for-byte the
+                    // same, while OCR and translation still run without delay.
+                    if (!prefs.firstPassOptimizationEnabled) {
+                        cachedBoxes = kept + partial
+                        showBoxes(kept + partial, groups, raw)
+                    }
                 },
                 // The reader's translations, for the regions it would
                 // translate anyway, and only where a region's text is its
@@ -611,10 +616,16 @@ class ReconcilerLiveMode(
                     }
                 }
             }
-            cachedBoxes = kept + finalAnchors
-            showBoxes(kept + finalAnchors, groups, raw)
+            // Never paint untranslated skeletons in the experimental mode.
+            // Keep any previously committed, unchanged boxes while the new
+            // translated regions finish; the old mode keeps every placeholder.
+            val committed = if (prefs.firstPassOptimizationEnabled &&
+                presenter.flavor == OverlayFlavor.TRANSLATION
+            ) finalAnchors.filter { it.translatedText.isNotBlank() } else finalAnchors
+            cachedBoxes = kept + committed
+            showBoxes(kept + committed, groups, raw)
             presenter.emitApplied(
-                kept + finalAnchors, pipeline?.ocrResult,
+                kept + committed, pipeline?.ocrResult,
                 frame.includesSystemUi, frame.includesOwnOverlays,
                 screenshotPath = { mgr.saveToCache(raw, displayId) },
                 attribution = read.attribution,

@@ -1260,6 +1260,13 @@ class Prefs internal constructor(
         get() = sp.getBoolean("touches_refresh_translation", true)
         set(v) = sp.edit { putBoolean("touches_refresh_translation", v) }
 
+    /** Experimental first-pass optimization for capture/live translation.
+     *  Defaults OFF; disabled uses the original OCR grouping and provisional
+     *  render callbacks with no new processing overhead. */
+    var firstPassOptimizationEnabled: Boolean
+        get() = sp.getBoolean(KEY_FIRST_PASS_OPTIMIZATION, false)
+        set(value) = sp.edit { putBoolean(KEY_FIRST_PASS_OPTIMIZATION, value) }
+
     /** When on (the default), a vertical-source box whose translation is too narrow to
      *  stack and too long to fit in place is grown in width over its source and rendered
      *  horizontally (it may widen over nearby non-text pixels). Off keeps such boxes in
@@ -2286,6 +2293,7 @@ class Prefs internal constructor(
         const val KEY_HIDE_GAME_OVERLAYS                   = "hide_game_overlays"
         /** Public so a showing result panel can [observe] it. */
         const val KEY_EDGE_INDICATOR_ENABLED               = "edge_indicator_enabled"
+        private const val KEY_FIRST_PASS_OPTIMIZATION     = "first_pass_optimization_enabled"
         private const val KEY_OVERLAY_MIN_TEXT_SP          = "overlay_min_text_sp"
         private const val KEY_OVERLAY_BG_TRANSPARENCY = "overlay_bg_transparency"
         private const val KEY_OVERLAY_BG_HORIZONTAL_EXPANSION = "overlay_bg_horizontal_expansion"

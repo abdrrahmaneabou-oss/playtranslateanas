@@ -4897,6 +4897,8 @@
          (backend error or empty result; there is no OCR in this flow). -->
     <string name="process_text_translation_failed">Couldn\'t translate the selected text. Check your connection or language settings.</string>
 
+    <string name="settings_first_pass_optimization_title">First-pass optimization (experimental)</string>
+    <string name="settings_first_pass_optimization_subtitle">Try stronger text-line grouping using the first OCR read, and display only completed translations. Turn off to restore the current translation behavior for comparison.</string>
     <string name="settings_overlay_bg_transparency_title">Background transparency</string>
     <string name="settings_overlay_bg_transparency_subtitle" formatted="false">0% = fully opaque colour fill; 100% = no tint. In MediaProjection, Android may still limit the overlay window opacity to keep game touches working.</string>
     <string name="settings_overlay_bg_horizontal_extension_title">Horizontal extension</string>

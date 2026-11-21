@@ -6,6 +6,7 @@ import com.playtranslate.BuildConfig
 import com.playtranslate.OcrPreprocessingRecipe
 import com.playtranslate.language.OcrBackend
 import com.playtranslate.ocr.core.LayoutAnalyzer
+import com.playtranslate.ocr.core.FirstPassGroupingStrategy
 import com.playtranslate.ocr.core.LayoutGroup
 import com.playtranslate.ocr.core.OcrImage
 import com.playtranslate.ocr.core.RecognizedTextNormalizer
@@ -117,6 +118,9 @@ object OcrPipeline {
         refineWithMangaOcr: Boolean = false,
         regionPreFilter: com.playtranslate.ocr.core.RegionPreFilter? = null,
         documentLayoutBias: Boolean = false,
+        /** Experimental alternate layout analysis on the SAME recognized frame.
+         *  No second OCR invocation and no extra screenshot. */
+        firstPassOptimization: Boolean = false,
         angleNoiseGateDeg: Float = com.playtranslate.ocr.core.OcrBox.ANGLE_NOISE_GATE_DEG,
         /** Drop furigana regions ([RubyFilter]) between normalization and
          *  layout. Debug-flag only; the caller also gates it on a Japanese
@@ -176,6 +180,7 @@ object OcrPipeline {
                 screenshotWidthInRegionSpace = screenshotWidth * rec.scaleFactor,
                 logDecisions = logGrouping,
                 documentPitchPrior = documentLayoutBias,
+                strategy = if (firstPassOptimization) FirstPassGroupingStrategy() else null,
             )
             if (groups.isEmpty()) return@withRecognition null
             // Optional manga-ocr refinement, post-layout so both entry points share it.

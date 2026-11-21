@@ -106,6 +106,7 @@ class PlayTranslateApplication : Application() {
         // Furigana filter: a user setting, mirrored into the OCR gate like the
         // debug toggles above (ocr.core can't read Prefs itself).
         OcrManager.instance.filterFuriganaEnabled = Prefs(this).filterFurigana
+        OcrManager.instance.firstPassOptimizationEnabled = Prefs(this).firstPassOptimizationEnabled
         // Push the "Use MangaOCR" toggle + installed-pack state into the OCR gate
         // (same Context-free reason as above — the refiner can't resolve the pack itself).
         com.playtranslate.ocr.mangaocr.MangaOcrProvisioning.refresh(applicationContext)

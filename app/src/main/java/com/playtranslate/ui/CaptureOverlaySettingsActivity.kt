@@ -101,6 +101,8 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
     private lateinit var switchHideOverlays: MaterialSwitch
     private lateinit var rowTouchesRefresh: View
     private lateinit var switchTouchesRefresh: MaterialSwitch
+    private lateinit var rowFirstPassOptimization: View
+    private lateinit var switchFirstPassOptimization: MaterialSwitch
 
     // ── Overlay refs ──────────────────────────────────────────────────────
     private lateinit var overlayModeSection: View
@@ -149,6 +151,8 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
         switchHideOverlays = rowHideOverlays.findViewById(R.id.switchRowToggle)
         rowTouchesRefresh = findViewById(R.id.rowTouchesRefresh)
         switchTouchesRefresh = rowTouchesRefresh.findViewById(R.id.switchRowToggle)
+        rowFirstPassOptimization = findViewById(R.id.rowFirstPassOptimization)
+        switchFirstPassOptimization = rowFirstPassOptimization.findViewById(R.id.switchRowToggle)
         sliderBackgroundTransparency = findViewById(R.id.sliderBackgroundTransparency)
         sliderBackgroundHorizontalExpansion = findViewById(R.id.sliderBackgroundHorizontalExpansion)
         sliderBackgroundEdgeFade = findViewById(R.id.sliderBackgroundEdgeFade)
@@ -286,6 +290,26 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
             prefs.touchesRefreshTranslation = checked
         }
         rowTouchesRefresh.setOnClickListener { switchTouchesRefresh.toggle() }
+
+        // Experimental A/B switch: OFF restores the existing OCR grouping and
+        // immediate partial renders. Persisted across restarts, disabled by default.
+        rowFirstPassOptimization.findViewById<TextView>(R.id.tvRowTitle)
+            .setText(R.string.settings_first_pass_optimization_title)
+        rowFirstPassOptimization.findViewById<TextView>(R.id.tvRowSubtitle).apply {
+            setText(R.string.settings_first_pass_optimization_subtitle)
+            isVisible = true
+        }
+        switchFirstPassOptimization.isChecked = prefs.firstPassOptimizationEnabled
+        switchFirstPassOptimization.setOnCheckedChangeListener { _, enabled ->
+            prefs.firstPassOptimizationEnabled = enabled
+            OcrManager.instance.firstPassOptimizationEnabled = enabled
+            // Clear the old layout state: a fresh live session must not compare
+            // newly grouped rectangles against boxes from the other strategy.
+            if (CaptureService.instance?.isLive == true) CaptureService.instance?.stopLive()
+        }
+        rowFirstPassOptimization.setOnClickListener {
+            switchFirstPassOptimization.toggle()
+        }
 
         setupCaptureInterval()
     }

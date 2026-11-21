@@ -294,6 +294,16 @@
                         android:layout_marginStart="@dimen/pt_row_h_padding"
                         android:background="?attr/ptDivider" />
 
+                    <!-- First-pass layout/translation A/B comparison. OFF is legacy. -->
+                    <include layout="@layout/settings_row_switch"
+                        android:id="@+id/rowFirstPassOptimization" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="@dimen/pt_row_h_padding"
+                        android:background="?attr/ptDivider" />
+
                     <!-- Capture interval (value-row style) -->
                     <LinearLayout
                         android:id="@+id/rowCaptureInterval"

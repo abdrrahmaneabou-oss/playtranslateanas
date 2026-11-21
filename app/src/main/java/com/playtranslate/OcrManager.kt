@@ -44,6 +44,10 @@ class OcrManager private constructor() {
      *  already-exercised code. */
     @Volatile var debugAngleGateDeg: Float? = null
 
+    /** Experimental same-frame layout arbitration; legacy behavior when false.
+     *  Set by the Application at startup and by the Capture & overlay switch. */
+    @Volatile var firstPassOptimizationEnabled: Boolean = false
+
     /** Drop furigana regions before grouping
      *  ([com.playtranslate.ocr.core.RubyFilter]); mirrors [Prefs.filterFurigana].
      *  Pushed from [PlayTranslateApplication] on start and from the Capture
@@ -303,6 +307,7 @@ class OcrManager private constructor() {
             refineWithMangaOcr = shouldRefineMangaOcr(source),
             regionPreFilter = regionPreFilter,
             documentLayoutBias = documentLayoutBias,
+            firstPassOptimization = firstPassOptimizationEnabled && !documentLayoutBias,
             angleNoiseGateDeg = debugAngleGateDeg
                 ?: com.playtranslate.ocr.core.OcrBox.ANGLE_NOISE_GATE_DEG,
             // A drag lookup reads through here too: over furigana pixels it
