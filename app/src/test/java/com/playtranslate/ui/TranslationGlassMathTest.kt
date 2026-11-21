@@ -19,6 +19,22 @@ class TranslationGlassMathTest {
         assertEquals(1f, TranslationGlassMath.horizontalOverhang(100f, 0), 0f)
     }
 
+    @Test fun horizontalFadeNeverReachesTheOriginalTextFootprint() {
+        for (width in listOf(40f, 100f, 200f, 400f)) {
+            for (expansion in 1..15) {
+                val extra = TranslationGlassMath.horizontalOverhang(width, expansion)
+                for (fade in 1..100) {
+                    val band = TranslationGlassMath.horizontalFeatherWidth(
+                        width + 2f * extra, extra, fade
+                    )
+                    assertTrue("Horizontal fade leaked into text width=$width expansion=$expansion fade=$fade",
+                        band <= extra)
+                    assertTrue("Horizontal feather must have positive span", band > 0f)
+                }
+            }
+        }
+    }
+
     @Test fun fadeIsContinuousBroadAndMonotone() {
         assertEquals(0f, TranslationGlassMath.featherFraction(0), 0f)
         assertTrue(TranslationGlassMath.featherFraction(10) >= 0.18f)
