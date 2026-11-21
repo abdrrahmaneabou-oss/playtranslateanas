@@ -1288,10 +1288,10 @@ class Prefs internal constructor(
         get() = sp.getInt(KEY_OVERLAY_BG_TRANSPARENCY, 12).coerceIn(0, 100)
         set(v) = sp.edit { putInt(KEY_OVERLAY_BG_TRANSPARENCY, v.coerceIn(0, 100)) }
 
-    /** Blur intensity in percent; no frame sampling at zero. */
-    var overlayBackgroundBlur: Int
-        get() = sp.getInt(KEY_OVERLAY_BG_BLUR, 0).coerceIn(0, 100)
-        set(v) = sp.edit { putInt(KEY_OVERLAY_BG_BLUR, v.coerceIn(0, 100)) }
+    /** Each side extends by this percentage of its own translation rectangle. */
+    var overlayBackgroundHorizontalExpansion: Int
+        get() = sp.getInt(KEY_OVERLAY_BG_HORIZONTAL_EXPANSION, 5).coerceIn(1, 15)
+        set(v) = sp.edit { putInt(KEY_OVERLAY_BG_HORIZONTAL_EXPANSION, v.coerceIn(1, 15)) }
 
     var overlayBackgroundRounded: Boolean
         get() = sp.getBoolean(KEY_OVERLAY_BG_ROUNDED, false)
@@ -2288,7 +2288,7 @@ class Prefs internal constructor(
         const val KEY_EDGE_INDICATOR_ENABLED               = "edge_indicator_enabled"
         private const val KEY_OVERLAY_MIN_TEXT_SP          = "overlay_min_text_sp"
         private const val KEY_OVERLAY_BG_TRANSPARENCY = "overlay_bg_transparency"
-        private const val KEY_OVERLAY_BG_BLUR = "overlay_bg_blur"
+        private const val KEY_OVERLAY_BG_HORIZONTAL_EXPANSION = "overlay_bg_horizontal_expansion"
         private const val KEY_OVERLAY_BG_ROUNDED = "overlay_bg_rounded"
         private const val KEY_OVERLAY_BG_EDGE_FADE = "overlay_bg_edge_fade"
         private const val KEY_FILTER_FURIGANA              = "filter_furigana"
