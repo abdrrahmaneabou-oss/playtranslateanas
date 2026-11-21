@@ -2193,8 +2193,8 @@ class OverlayUiController(
             when (setting) {
                 com.playtranslate.ui.OverlayAppearanceSetting.TRANSPARENCY ->
                     p.overlayBackgroundTransparency = value
-                com.playtranslate.ui.OverlayAppearanceSetting.BLUR ->
-                    p.overlayBackgroundBlur = value
+                com.playtranslate.ui.OverlayAppearanceSetting.HORIZONTAL_EXPANSION ->
+                    p.overlayBackgroundHorizontalExpansion = value
                 com.playtranslate.ui.OverlayAppearanceSetting.EDGE_FADE ->
                     p.overlayBackgroundEdgeFade = value
                 com.playtranslate.ui.OverlayAppearanceSetting.ROUNDED ->
@@ -2205,6 +2205,9 @@ class OverlayUiController(
             // the underlying game's input dispatch.
             val appearance = OverlayRenderConfig.from(p)
             translationOverlayHandles.values.forEach { it.applyAppearanceConfig(appearance) }
+        }
+        menu.onCaptureIntervalChanged = { seconds ->
+            Prefs(context).captureIntervalSec = seconds
         }
         menu.onOpenApp = {
             dismissFloatingMenu()
