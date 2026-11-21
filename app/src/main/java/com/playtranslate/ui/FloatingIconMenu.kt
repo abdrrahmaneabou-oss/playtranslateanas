@@ -39,6 +39,7 @@ import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.toColorInt
+import kotlin.math.roundToInt
 
 /** Reason the floating-icon menu's warning pill is shown. None hides the
  *  pill; the other two pick the corresponding label string. Set by the
@@ -47,7 +48,7 @@ import androidx.core.graphics.toColorInt
 enum class DegradedWarningKind { None, Offline, LowMemory }
 
 /** Stable style-setting keys shared by the compact menu and overlay controller. */
-enum class OverlayAppearanceSetting { TRANSPARENCY, BLUR, EDGE_FADE, ROUNDED }
+enum class OverlayAppearanceSetting { TRANSPARENCY, HORIZONTAL_EXPANSION, EDGE_FADE, ROUNDED }
 
 /**
  * Full-screen overlay that dims the screen and shows a small popup menu
@@ -148,6 +149,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
     var onToggleMangaOcr: (() -> Unit)? = null
     /** Persist + refresh already displayed translation boxes without restarting live OCR. */
     var onAppearanceChanged: ((OverlayAppearanceSetting, Int) -> Unit)? = null
+    var onCaptureIntervalChanged: ((Float) -> Unit)? = null
     var onCycleOverlayMode: (() -> Unit)? = null
     var onOpenApp: (() -> Unit)? = null
     var isSingleScreen: Boolean = false
@@ -236,13 +238,8 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
     }
 
     private val dimPaint = Paint().apply {
-        // Normal quick menu and region picker keep the original strong dim.
+        // Only used during an explicit drag-to-select gesture.
         color = Color.argb(200, 0, 0, 0)
-    }
-    private val appearancePreviewDimPaint = Paint().apply {
-        // The live-style editor must leave translated game text visible so
-        // slider changes can be judged against the actual colours on screen.
-        color = Color.argb(88, 0, 0, 0)
     }
     private val clearPaint = Paint().apply {
         xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR)
@@ -868,7 +865,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
      *  ease-out animation (and back). Panel content is added later. */
     private fun toggleExpanded() {
         expanded = !expanded
-        invalidate() // Repaint the game's live preview with a lighter dim.
+        invalidate() // Do not dim the gameplay while styling overlays.
         updateSettingsButton()
 
         val startRight = rightStack.width.takeIf { it > 0 } ?: collapsedRightWidthPx
@@ -989,6 +986,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
         // rows. The narrow gear panel uses compact widgets, NOT the full-sized
         // cards from Capture & Overlay; the outer panel remains scrollable.
         addQuickAppearanceControls()
+        addQuickIntervalControl()
 
         // Language + OCR: title on the left, right-aligned value (chevron hidden).
         addPanelValueRow(inflater, context.getString(R.string.floating_menu_panel_language), languageName) {
@@ -1051,7 +1049,8 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
         panelRows.addView(header, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
         ))
-        fun addSlider(labelRes: Int, value: Int, key: OverlayAppearanceSetting) {
+        fun addSlider(labelRes: Int, value: Int, key: OverlayAppearanceSetting,
+                      minValue: Int = 0, maxValue: Int = 100) {
             val cell = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding((10 * dp).toInt(), 0, (9 * dp).toInt(), 0)
@@ -1069,7 +1068,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
                 ellipsize = TextUtils.TruncateAt.END
             }
             val number = TextView(context).apply {
-                text = value.coerceIn(0, 100).toString() + "%"
+                text = value.coerceIn(minValue, maxValue).toString() + "%"
                 textSize = 11f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(accentColor)
@@ -1082,8 +1081,8 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
             cell.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 (15 * dp).toInt()))
             val slider = SeekBar(context).apply {
-                max = 100
-                progress = value.coerceIn(0, 100)
+                max = maxValue - minValue
+                progress = value.coerceIn(minValue, maxValue) - minValue
                 progressTintList = ColorStateList.valueOf(accentColor)
                 thumbTintList = ColorStateList.valueOf(accentColor)
                 progressBackgroundTintList = ColorStateList.valueOf(hintColor)
@@ -1092,8 +1091,9 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                         if (!fromUser) return
-                        number.text = progress.toString() + "%"
-                        onAppearanceChanged?.invoke(key, progress)
+                        val selected = progress + minValue
+                        number.text = selected.toString() + "%"
+                        onAppearanceChanged?.invoke(key, selected)
                     }
                     override fun onStartTrackingTouch(seekBar: SeekBar) {
                         seekBar.parent?.requestDisallowInterceptTouchEvent(true)
@@ -1112,8 +1112,9 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
 
         addSlider(R.string.floating_menu_style_transparency,
             prefs.overlayBackgroundTransparency, OverlayAppearanceSetting.TRANSPARENCY)
-        addSlider(R.string.floating_menu_style_blur,
-            prefs.overlayBackgroundBlur, OverlayAppearanceSetting.BLUR)
+        addSlider(R.string.floating_menu_style_horizontal_extension,
+            prefs.overlayBackgroundHorizontalExpansion, OverlayAppearanceSetting.HORIZONTAL_EXPANSION,
+            minValue = 1, maxValue = 15)
         addSlider(R.string.floating_menu_style_fade,
             prefs.overlayBackgroundEdgeFade, OverlayAppearanceSetting.EDGE_FADE)
 
@@ -1144,6 +1145,63 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
         rounded.setOnClickListener { roundedSwitch.toggle() }
         panelRows.addView(rounded, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, (38 * dp).toInt()))
+        panelRows.addView(panelDivider())
+    }
+
+    /** Change capture cadence from the floating gear without opening the keyboard. */
+    private fun addQuickIntervalControl() {
+        val prefs = com.playtranslate.Prefs(context)
+        val minQuarters = (com.playtranslate.Prefs.MIN_CAPTURE_INTERVAL_SEC * 4f).toInt()
+        var quarters = (prefs.captureIntervalSec * 4f).roundToInt().coerceAtLeast(minQuarters)
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding((10 * dp).toInt(), (2 * dp).toInt(), (9 * dp).toInt(), (2 * dp).toInt())
+        }
+        val title = TextView(context).apply {
+            setText(R.string.settings_capture_interval_title)
+            setTextColor(textColor)
+            textSize = 11f
+            maxLines = 1
+        }
+        val value = TextView(context).apply {
+            setTextColor(accentColor)
+            setTypeface(null, Typeface.BOLD)
+            textSize = 11f
+            gravity = Gravity.CENTER
+            text = String.format(java.util.Locale.US, "%.2fs", quarters / 4f)
+        }
+        fun button(symbol: String, descriptionRes: Int, action: () -> Unit): TextView =
+            TextView(context).apply {
+                text = symbol
+                textSize = 17f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(textColor)
+                gravity = Gravity.CENTER
+                contentDescription = context.getString(descriptionRes)
+                background = GradientDrawable().apply {
+                    cornerRadius = 7f * dp
+                    setColor(cardColor)
+                    setStroke((1f * dp).toInt().coerceAtLeast(1), hintColor)
+                }
+                setOnClickListener { action() }
+            }
+        fun update() {
+            value.text = String.format(java.util.Locale.US, "%.2fs", quarters / 4f)
+            onCaptureIntervalChanged?.invoke(quarters / 4f)
+        }
+        val minus = button("−", R.string.floating_menu_interval_decrease) {
+            if (quarters > minQuarters) { quarters--; update() }
+        }
+        val plus = button("+", R.string.floating_menu_interval_increase) {
+            quarters++; update()
+        }
+        row.addView(title, LinearLayout.LayoutParams(0, (30 * dp).toInt(), 1f))
+        row.addView(minus, LinearLayout.LayoutParams((30 * dp).toInt(), (30 * dp).toInt()))
+        row.addView(value, LinearLayout.LayoutParams((63 * dp).toInt(), (30 * dp).toInt()))
+        row.addView(plus, LinearLayout.LayoutParams((30 * dp).toInt(), (30 * dp).toInt()))
+        panelRows.addView(row, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, (36 * dp).toInt()))
         panelRows.addView(panelDivider())
     }
 
@@ -1273,24 +1331,15 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
             // Card-colored base border + accent dashes (screen-space stable)
             drawDashedBorder(canvas, sel)
         } else {
-            val paint = if (expanded) appearancePreviewDimPaint else dimPaint
+            // Keep the game at its original brightness, with or without
+            // the expanded settings panel. Selection drag above is independent.
             val region = activeRegion
             if (region != null && !region.isFullScreen) {
-                // Show the active capture region as a clear window
                 val w = width.toFloat()
                 val h = height.toFloat()
-                regionRect.set(
-                    region.left * w, region.top * h,
-                    region.right * w, region.bottom * h
-                )
-                canvas.drawRect(0f, 0f, w, h, paint)
-                canvas.drawRect(regionRect, regionFillPaint)
-                // Same separated-line boundary as region editing. The region's
-                // name pill and clear button are child views
-                // ([showRegionChrome]) — the button has to be tappable.
+                regionRect.set(region.left * w, region.top * h,
+                    region.right * w, region.bottom * h)
                 drawDashedBorder(canvas, regionRect)
-            } else {
-                canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
             }
         }
     }
