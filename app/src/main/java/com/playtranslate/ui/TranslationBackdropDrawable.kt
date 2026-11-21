@@ -18,7 +18,7 @@ import kotlin.math.roundToInt
  * Overlay background material, drawn separately from the sharp Arabic text.
  *
  *  - Transparency is exclusively the alpha of the sampled colour TINT:
- *    0 = 255/255 opaque, 100 = 0/255. It never changes blur strength.
+ *    0 = 255/255 opaque, 100 = 0/255.
  *  - Tint retains each text box's sampled background colour.
  *  - Horizontal extension is a percent of each individual text box's width.
  *  - Edge fading affects only this material, never the sharp glyphs.
@@ -79,8 +79,8 @@ internal class TranslationBackdropDrawable(
         }
 
         if (edgeFade > 0) {
-            val gradients = shaders(w, h)
-            val fx = (w * TranslationGlassMath.featherFraction(edgeFade)).coerceAtLeast(0.5f)
+            val gradients = shaders(w, h, extraX)
+            val fx = TranslationGlassMath.horizontalFeatherWidth(w, extraX, edgeFade)
             val fy = (h * TranslationGlassMath.featherFraction(edgeFade)).coerceAtLeast(0.5f)
             erase.shader = gradients[0]
             canvas.drawRect(0f, 0f, fx, h, erase)
@@ -95,14 +95,14 @@ internal class TranslationBackdropDrawable(
         canvas.restoreToCount(layer)
     }
 
-    /** Smoothstep alpha stops over a broad range; avoids the narrow, harsh
-     *  rectangular erase at low slider values. Reused on every draw. */
-    private fun shaders(w: Float, h: Float): Array<Shader> {
+    /** Smoothstep gradients. The two horizontal bands are confined entirely
+     *  to the extra side margins; they never reveal original text underneath. */
+    private fun shaders(w: Float, h: Float, extraX: Float): Array<Shader> {
         val current = cachedSize
         val present = featherShaders
         if (current?.first == w && current.second == h && present != null) return present
         val fraction = TranslationGlassMath.featherFraction(edgeFade)
-        val fx = (w * fraction).coerceAtLeast(0.5f)
+        val fx = TranslationGlassMath.horizontalFeatherWidth(w, extraX, edgeFade)
         val fy = (h * fraction).coerceAtLeast(0.5f)
         val stops = floatArrayOf(0f, 0.2f, 0.4f, 0.6f, 0.8f, 1f)
         val colors = stops.map { Color.argb(TranslationGlassMath.erasedAt(it), 0, 0, 0) }
