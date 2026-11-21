@@ -28,6 +28,10 @@ jobs:
 
       - name: Reuse Gradle dependencies and build cache
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # The action defaults to read-only caches on non-default branches.
+          # This experimental branch must publish its own warm cache.
+          cache-read-only: false
 
       - name: Check whether previously validated native libraries are reusable
         id: native-sources
