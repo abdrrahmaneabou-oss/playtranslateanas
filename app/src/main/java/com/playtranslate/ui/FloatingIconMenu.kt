@@ -1040,7 +1040,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
             textSize = 11f
             setTypeface(null, Typeface.BOLD)
             setTextColor(mutedColor)
-            setPadding((11 * dp).toInt(), (8 * dp).toInt(), 0, (4 * dp).toInt())
+            setPadding((11 * dp).toInt(), (3 * dp).toInt(), 0, (1 * dp).toInt())
         }
         panelRows.addView(header, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1074,7 +1074,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
             row.addView(number, LinearLayout.LayoutParams((43 * dp).toInt(),
                 ViewGroup.LayoutParams.WRAP_CONTENT))
             cell.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                (17 * dp).toInt()))
+                (15 * dp).toInt()))
             val slider = SeekBar(context).apply {
                 max = 100
                 progress = value.coerceIn(0, 100)
@@ -1098,9 +1098,9 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
                 })
             }
             cell.addView(slider, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, (25 * dp).toInt()))
+                ViewGroup.LayoutParams.MATCH_PARENT, (19 * dp).toInt()))
             panelRows.addView(cell, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, (47 * dp).toInt()))
+                ViewGroup.LayoutParams.MATCH_PARENT, (37 * dp).toInt()))
             panelRows.addView(panelDivider())
         }
 
@@ -1123,6 +1123,8 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
         }
         val roundedSwitch = MaterialSwitch(context).apply {
             isChecked = prefs.overlayBackgroundRounded
+            scaleX = 0.78f
+            scaleY = 0.78f
             contentDescription = context.getString(R.string.floating_menu_style_rounded)
             setOnCheckedChangeListener { _, checked ->
                 onAppearanceChanged?.invoke(OverlayAppearanceSetting.ROUNDED, if (checked) 1 else 0)
@@ -1135,7 +1137,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
         ))
         rounded.setOnClickListener { roundedSwitch.toggle() }
         panelRows.addView(rounded, LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, (40 * dp).toInt()))
+            ViewGroup.LayoutParams.MATCH_PARENT, (38 * dp).toInt()))
         panelRows.addView(panelDivider())
     }
 

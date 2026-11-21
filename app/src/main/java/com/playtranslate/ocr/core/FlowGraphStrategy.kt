@@ -786,9 +786,9 @@ class FlowGraphStrategy(
         // strong independent-choice evidence.
         if (SpacedDialogueChoices.isChoiceStack(
                 texts = seg.map { it.text },
-                lefts = seg.map { it.effStart },
+                lefts = seg.map { it.effStart.toDouble() },
                 centers = seg.map { it.center },
-                width = seg.maxOf { it.inHi } - seg.minOf { it.inLo },
+                width = (seg.maxOf { it.inHi } - seg.minOf { it.inLo }).toDouble(),
                 screenWidth = screenWidth,
                 em = seg.maxOf { it.em }
             )) return true
