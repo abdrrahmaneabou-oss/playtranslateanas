@@ -1063,7 +1063,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
                 ellipsize = TextUtils.TruncateAt.END
             }
             val number = TextView(context).apply {
-                text = "$" + "{value.coerceIn(0, 100)}%"
+                text = value.coerceIn(0, 100).toString() + "%"
                 textSize = 11f
                 setTypeface(null, Typeface.BOLD)
                 setTextColor(accentColor)
@@ -1086,7 +1086,7 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                         if (!fromUser) return
-                        number.text = "$" + "{progress}%"
+                        number.text = progress.toString() + "%"
                         onAppearanceChanged?.invoke(key, progress)
                     }
                     override fun onStartTrackingTouch(seekBar: SeekBar) {
