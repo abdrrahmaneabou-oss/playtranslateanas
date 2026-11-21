@@ -4899,8 +4899,8 @@
 
     <string name="settings_overlay_bg_transparency_title">Background transparency</string>
     <string name="settings_overlay_bg_transparency_subtitle" formatted="false">0% = fully opaque colour fill; 100% = no tint. In MediaProjection, Android may still limit the overlay window opacity to keep game touches working.</string>
-    <string name="settings_overlay_bg_blur_title">Background blur</string>
-    <string name="settings_overlay_bg_blur_subtitle" formatted="false">Mix nearby game colours like frosted glass. 0% = no blur; 100% = strongest blur. Independent of tint transparency.</string>
+    <string name="settings_overlay_bg_horizontal_extension_title">Horizontal extension</string>
+    <string name="settings_overlay_bg_horizontal_extension_subtitle" formatted="false">Extend each rectangle by 1–15% of its own width on each side. Height stays unchanged.</string>
     <string name="settings_overlay_bg_round_title">Rounded corners</string>
     <string name="settings_overlay_bg_round_subtitle">Round the edges of translation backgrounds.</string>
     <string name="settings_overlay_bg_fade_title">Edge fading</string>
@@ -4927,7 +4927,9 @@
     <string name="backup_first_restore_now">Folder selected. Do you want to restore an existing English or Arabic backup now?</string>
     <string name="floating_menu_appearance">OVERLAY APPEARANCE</string>
     <string name="floating_menu_style_transparency">Transparency</string>
-    <string name="floating_menu_style_blur">Blur</string>
+    <string name="floating_menu_style_horizontal_extension">Width + each side</string>
+    <string name="floating_menu_interval_decrease">Decrease capture interval by 0.25 seconds</string>
+    <string name="floating_menu_interval_increase">Increase capture interval by 0.25 seconds</string>
     <string name="floating_menu_style_fade">Edge fading</string>
     <string name="floating_menu_style_rounded">Rounded corners</string>
 </resources>
