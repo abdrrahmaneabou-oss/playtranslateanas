@@ -777,6 +777,21 @@ class FlowGraphStrategy(
         if (seg.any { it.vertical }) return false
         val screenWidth = ctx.screenshotWidthInRegionSpace
         if (screenWidth <= 0f) return false
+        // Dialogue-choice stacks are individual clickable rows, not a
+        // paragraph. Two questions followed by a short ellipsis-prefixed
+        // response (Genshin: "Who are you? / What are you doing here? /
+        // ...Bye.") can otherwise be glued together because a leading
+        // ellipsis looks like a prose continuation. Only override the
+        // continuation veto when the row geometry and punctuation provide
+        // strong independent-choice evidence.
+        if (SpacedDialogueChoices.isChoiceStack(
+                texts = seg.map { it.text },
+                lefts = seg.map { it.effStart },
+                centers = seg.map { it.center },
+                width = seg.maxOf { it.inHi } - seg.minOf { it.inLo },
+                screenWidth = screenWidth,
+                em = seg.maxOf { it.em }
+            )) return true
         for (k in 0 until seg.size - 1) {
             if (continues(seg[k].text, ctx.sourceLang) ||
                 startsContinuation(seg[k + 1].text, ctx.sourceLang)
