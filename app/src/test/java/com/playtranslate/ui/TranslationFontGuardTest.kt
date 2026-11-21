@@ -22,4 +22,14 @@ class TranslationFontGuardTest {
     @Test fun minimumRemainsLegibleIfOcrHeightIsBad() {
         assertEquals(13, TranslationFontGuard.sourceCeilingSp(1f, 1f, 2f, 12, 96))
     }
+
+    @Test fun twoQuestionChoicesAreProtectedWhenThirdIsMissing() {
+        assertEquals(34f, TranslationFontGuard.pairedQuestionReferenceHeight(
+            "What are you doing here?", "Who are you?", 180f, 34f))
+    }
+
+    @Test fun headingNearDialogueIsNotForcedSmall() {
+        org.junit.Assert.assertNull(TranslationFontGuard.pairedQuestionReferenceHeight(
+            "Character", "Who are you?", 180f, 34f))
+    }
 }
