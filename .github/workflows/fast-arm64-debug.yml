@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - experiment/fast-arm64-native-cache
+      - feature/frosted-overlay-material-v2
   workflow_dispatch:
 
 permissions:
@@ -108,6 +109,13 @@ jobs:
           else
             ./gradlew :app:assembleDebug --build-cache --parallel --no-daemon --stacktrace
           fi
+
+      - name: Test glass material slider invariants
+        if: github.ref_name == 'feature/frosted-overlay-material-v2'
+        run: |
+          ./gradlew :app:testDebugUnitTest \
+            --tests "com.playtranslate.ui.TranslationGlassMathTest" \
+            --no-daemon --build-cache --parallel
 
       - name: Verify ABI and native binaries inside final APK
         shell: bash

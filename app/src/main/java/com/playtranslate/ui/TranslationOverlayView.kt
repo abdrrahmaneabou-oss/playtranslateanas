@@ -11,6 +11,9 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -254,23 +257,42 @@ class TranslationOverlayView(
      *  allows blur intensity to change without capturing again. */
     private var cleanBackdropSample: Bitmap? = null
 
-    /** Repaint while the full-screen quick menu has captures paused. */
+    private val blurHandler = Handler(Looper.getMainLooper())
+    private var lastBlurRecomputeMs = 0L
+    private val blurRefresh = Runnable {
+        val old = blurredBackdrop
+        blurredBackdrop = cleanBackdropSample?.let {
+            TranslationBackdropPixels.blur(it, renderConfig.backgroundBlur)
+        }
+        old?.recycle()
+        lastBlurRecomputeMs = SystemClock.uptimeMillis()
+        if (width > 0 && height > 0) rebuildChildren()
+    }
+
+    /** Repaint in the floating gear without restarting live OCR or translating
+     *  again. Blur drags are coalesced to at most one expensive recompute every
+     *  85ms; cheaper changes update immediately. */
     fun applyAppearanceConfig(next: OverlayRenderConfig) {
         if (renderConfig == next) return
-        // The quick menu edits only appearance, but the same method safely
-        // handles a full config change by rebuilding children in place.
         val blurChanged = renderConfig.backgroundBlur != next.backgroundBlur
         renderConfig = next
-        // Transparency/feather/corner drags are cheap: reuse the last blurred
-        // screenshot rather than re-running the CPU blur 100 times a second.
         if (blurChanged) {
-            val oldBlur = blurredBackdrop
-            blurredBackdrop = cleanBackdropSample?.let {
-                TranslationBackdropPixels.blur(it, next.backgroundBlur)
+            blurHandler.removeCallbacks(blurRefresh)
+            if (next.backgroundBlur == 0) {
+                // Bypass both bitmap replacement and blur immediately at zero.
+                val old = blurredBackdrop
+                blurredBackdrop = null
+                old?.recycle()
+                lastBlurRecomputeMs = SystemClock.uptimeMillis()
+                if (width > 0 && height > 0) rebuildChildren()
+                return
             }
-            oldBlur?.recycle()
+            val delay = (85L - (SystemClock.uptimeMillis() - lastBlurRecomputeMs))
+                .coerceAtLeast(0L)
+            blurHandler.postDelayed(blurRefresh, delay)
+        } else if (width > 0 && height > 0) {
+            rebuildChildren()
         }
-        if (width > 0 && height > 0) rebuildChildren()
     }
 
     /** Cached full-view pinhole mask bitmap. Created on size change, recycled on detach. */
@@ -307,18 +329,24 @@ class TranslationOverlayView(
         var backdropChanged = false
         if (backdropFrame != null && !backdropFrame.isRecycled &&
             (visualInputsChanged || cleanBackdropSample == null)) {
-            val scale = minOf(1f, 288f / maxOf(backdropFrame.width, backdropFrame.height))
-            val sample = Bitmap.createScaledBitmap(backdropFrame,
-                (backdropFrame.width * scale).toInt().coerceAtLeast(1),
-                (backdropFrame.height * scale).toInt().coerceAtLeast(1), true)
+            blurHandler.removeCallbacks(blurRefresh)
+            // Keep a clean high-resolution sample. The old 288px screenshot
+            // was blurry and patchy even at intensity 1, before any blur was
+            // applied. Use 960px for colour-preserving frosted glass instead.
+            val scale = minOf(1f, TranslationBackdropPixels.MAX_SAMPLE_LONG_SIDE.toFloat() /
+                maxOf(backdropFrame.width, backdropFrame.height))
+            val sw = (backdropFrame.width * scale).roundToInt().coerceAtLeast(1)
+            val sh = (backdropFrame.height * scale).roundToInt().coerceAtLeast(1)
+            val sample = if (sw == backdropFrame.width && sh == backdropFrame.height)
+                backdropFrame.copy(Bitmap.Config.ARGB_8888, false)
+            else Bitmap.createScaledBitmap(backdropFrame, sw, sh, true)
             val previousSample = cleanBackdropSample
-            cleanBackdropSample = if (sample === backdropFrame) sample.copy(Bitmap.Config.ARGB_8888, false) else sample
+            cleanBackdropSample = sample
             previousSample?.recycle()
             val previous = blurredBackdrop
-            blurredBackdrop = cleanBackdropSample?.let {
-                TranslationBackdropPixels.blur(it, renderConfig.backgroundBlur)
-            }
+            blurredBackdrop = TranslationBackdropPixels.blur(sample, renderConfig.backgroundBlur)
             previous?.recycle()
+            lastBlurRecomputeMs = SystemClock.uptimeMillis()
             backdropChanged = true
         }
         val limitsChanged = minTextRaised && growthLimits != this.growthLimits
@@ -417,6 +445,7 @@ class TranslationOverlayView(
     }
 
     override fun onDetachedFromWindow() {
+        blurHandler.removeCallbacks(blurRefresh)
         super.onDetachedFromWindow()
         shimmerAnimator?.cancel()
         shimmerAnimator = null
@@ -605,7 +634,15 @@ class TranslationOverlayView(
                 // so this fill is load-bearing on the vertical path too: a
                 // transparent box would break renderToOffscreen's reference and
                 // oscillate REMOVE.
+                val styled = renderConfig.backgroundTransparency != 12 ||
+                    renderConfig.backgroundBlur > 0 ||
+                    renderConfig.backgroundRounded || renderConfig.backgroundEdgeFade > 0
+                // Preserve the game's sampled colour when a custom glass
+                // material is selected. The contrast-boost path lightens dark
+                // text backgrounds toward white (perceived as powdery haze),
+                // so keep that legacy boost only with untouched defaults.
                 val fillColor = when {
+                    styled -> box.bgColor or 0xFF000000.toInt()
                     boostContrast -> pushBgAwayFromText(box.bgColor, box.textColor)
                     pinholeMode -> box.bgColor or 0xFF000000.toInt()
                     else -> box.bgColor
@@ -706,9 +743,6 @@ class TranslationOverlayView(
 
                 // Preserve the original pixels with untouched defaults.
                 // Only the backdrop changes; text and outlines remain sharp.
-                val styled = renderConfig.backgroundTransparency != 12 ||
-                    renderConfig.backgroundBlur > 0 ||
-                    renderConfig.backgroundRounded || renderConfig.backgroundEdgeFade > 0
                 if (styled) {
                     child.background = TranslationBackdropDrawable(
                         fillColor = fillColor,

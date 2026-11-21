@@ -4898,9 +4898,9 @@
     <string name="process_text_translation_failed">Couldn\'t translate the selected text. Check your connection or language settings.</string>
 
     <string name="settings_overlay_bg_transparency_title">Background transparency</string>
-    <string name="settings_overlay_bg_transparency_subtitle" formatted="false">0% opaque; 100% removes the colour fill.</string>
+    <string name="settings_overlay_bg_transparency_subtitle" formatted="false">0% = fully opaque colour fill; 100% = no tint. In MediaProjection, Android may still limit the overlay window opacity to keep game touches working.</string>
     <string name="settings_overlay_bg_blur_title">Background blur</string>
-    <string name="settings_overlay_bg_blur_subtitle" formatted="false">Soften captured game pixels behind translations; 0% disables blur.</string>
+    <string name="settings_overlay_bg_blur_subtitle" formatted="false">Mix nearby game colours like frosted glass. 0% = no blur; 100% = strongest blur. Independent of tint transparency.</string>
     <string name="settings_overlay_bg_round_title">Rounded corners</string>
     <string name="settings_overlay_bg_round_subtitle">Round the edges of translation backgrounds.</string>
     <string name="settings_overlay_bg_fade_title">Edge fading</string>
