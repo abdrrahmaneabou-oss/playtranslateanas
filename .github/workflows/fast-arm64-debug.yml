@@ -1,0 +1,131 @@
+name: Fast verified ARM64 debug APK
+
+on:
+  push:
+    branches:
+      - experiment/fast-arm64-native-cache
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  fast-arm64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout app source (native submodules only if native changed)
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Reuse Gradle dependencies and build cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          # Gradle dependencies and build-cache entries were seeded in
+          # successful run 44938439576. Reuse them without paying the upload
+          # cost on every small UI iteration. A new seed run is needed only
+          # when the native/tooling baseline materially changes.
+          cache-read-only: true
+
+      - name: Check whether previously validated native libraries are reusable
+        id: native-sources
+        run: python3 scripts/verified_native_fast_build.py check
+
+      - name: Restore verified native binary cache
+        id: native-cache
+        if: steps.native-sources.outputs.eligible == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            mnn/src/main/jniLibs
+            bergamot/src/main/jniLibs
+          key: playtranslate-verified-native-arm64-build11-v1
+
+      - name: Bootstrap native binaries from successful #11 build
+        if: steps.native-sources.outputs.eligible == 'true' && steps.native-cache.outputs.cache-hit != 'true'
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: playtranslate-background-controls-debug
+          repository: abdrrahmaneabou-oss/playtranslateanas
+          run-id: 44934642215
+          github-token: ${{ github.token }}
+          path: .verified-apk-bootstrap
+
+      - name: Select native build strategy
+        id: mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.native-sources.outputs.eligible }}" == "true" ]; then
+            if [ "${{ steps.native-cache.outputs.cache-hit }}" != "true" ] && [ -f .verified-apk-bootstrap/app-debug.apk ]; then
+              python3 scripts/verified_native_fast_build.py extract .verified-apk-bootstrap/app-debug.apk
+            fi
+            if python3 scripts/verified_native_fast_build.py verify-cache; then
+              echo "kind=fast" >> "$GITHUB_OUTPUT"
+              echo "Reusing byte-identical ARM64 MNN and Bergamot binaries."
+              exit 0
+            fi
+          fi
+          echo "kind=full" >> "$GITHUB_OUTPUT"
+          echo "Native source/config changed or no trusted artifact exists: full C++ build."
+
+      - name: Fetch native sources only if full build is required
+        if: steps.mode.outputs.kind == 'full'
+        run: git submodule update --init --recursive mnn/third-party/MNN bergamot/third-party/slimt
+
+      - name: Install minimal Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -path '*/bin/sdkmanager' | sort -V | tail -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" --install "platforms;android-36" "build-tools;36.0.0"
+          if [ "${{ steps.mode.outputs.kind }}" == "full" ]; then
+            "$SDKMANAGER" --sdk_root="$SDK_ROOT" --install "ndk;28.2.13676358" "cmake;3.22.1"
+          fi
+
+      - name: Assemble ARM64 debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          if [ "${{ steps.mode.outputs.kind }}" == "fast" ]; then
+            ./gradlew :app:assembleDebug -PuseVerifiedPrebuiltNative=true \
+              --build-cache --parallel --no-daemon --stacktrace
+          else
+            ./gradlew :app:assembleDebug --build-cache --parallel --no-daemon --stacktrace
+          fi
+
+      - name: Verify ABI and native binaries inside final APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)"
+          test -n "$APK"
+          if [ "${{ steps.mode.outputs.kind }}" == "fast" ]; then
+            python3 scripts/verified_native_fast_build.py verify "$APK" --baseline
+          else
+            python3 scripts/verified_native_fast_build.py verify "$APK"
+          fi
+          ls -lh "$APK"
+
+      - name: Export debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlayTranslate-fast-ARM64-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+          if-no-files-found: error

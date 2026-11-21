@@ -2,6 +2,13 @@ plugins {
     alias(libs.plugins.android.library)
 }
 
+// When GitHub Actions has exact, SHA-verified native binaries from a previously
+// successful build, skip CMake entirely. Local/full builds keep their original
+// native compiler and every optimisation flag unchanged.
+val useVerifiedPrebuiltNative = providers.gradleProperty("useVerifiedPrebuiltNative")
+    .map { it == "true" }.getOrElse(false)
+
+
 android {
     namespace = "com.playtranslate.bergamot"
     compileSdk = 36
@@ -20,7 +27,7 @@ android {
             // (same pattern as :mnn).
             abiFilters += listOf("arm64-v8a")
         }
-        externalNativeBuild {
+        if (!useVerifiedPrebuiltNative) externalNativeBuild {
             cmake {
                 arguments += "-DCMAKE_BUILD_TYPE=Release"
                 // Self-contained libc++ so libbergamot_jni.so doesn't share an
@@ -39,7 +46,7 @@ android {
             }
         }
     }
-    externalNativeBuild {
+    if (!useVerifiedPrebuiltNative) externalNativeBuild {
         cmake {
             path("src/main/cpp/CMakeLists.txt")
             // 3.22.1 ships with the Android SDK CMake (same as :mnn).
