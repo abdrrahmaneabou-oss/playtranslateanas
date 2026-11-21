@@ -53,9 +53,6 @@ android {
             version = "3.22.1"
         }
     }
-    if (useVerifiedPrebuiltNative) sourceSets.getByName("main")
-        .jniLibs.srcDir(rootProject.file("fast-native/bergamot"))
-
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
