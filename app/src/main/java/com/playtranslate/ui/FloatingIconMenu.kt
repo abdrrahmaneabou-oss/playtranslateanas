@@ -28,6 +28,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
+import com.google.android.material.materialswitch.MaterialSwitch
 import android.widget.TextView
 import com.playtranslate.R
 import com.playtranslate.RegionEntry
@@ -43,6 +45,9 @@ import androidx.core.graphics.toColorInt
  *  accessibility service from CaptureService's (degraded, displaced)
  *  state at menu build time. */
 enum class DegradedWarningKind { None, Offline, LowMemory }
+
+/** Stable style-setting keys shared by the compact menu and overlay controller. */
+enum class OverlayAppearanceSetting { TRANSPARENCY, BLUR, EDGE_FADE, ROUNDED }
 
 /**
  * Full-screen overlay that dims the screen and shows a small popup menu
@@ -141,6 +146,8 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
     var onSelectLanguage: (() -> Unit)? = null
     var onSelectOcr: (() -> Unit)? = null
     var onToggleMangaOcr: (() -> Unit)? = null
+    /** Persist + refresh already displayed translation boxes without restarting live OCR. */
+    var onAppearanceChanged: ((OverlayAppearanceSetting, Int) -> Unit)? = null
     var onCycleOverlayMode: (() -> Unit)? = null
     var onOpenApp: (() -> Unit)? = null
     var isSingleScreen: Boolean = false
@@ -972,6 +979,11 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
         overlayModeValueView = null
         mangaOcrValueView = null
 
+        // All four quick appearance controls live above the old language/OCR
+        // rows. The narrow gear panel uses compact widgets, NOT the full-sized
+        // cards from Capture & Overlay; the outer panel remains scrollable.
+        addQuickAppearanceControls()
+
         // Language + OCR: title on the left, right-aligned value (chevron hidden).
         addPanelValueRow(inflater, context.getString(R.string.floating_menu_panel_language), languageName) {
             onSelectLanguage?.invoke()
@@ -1015,6 +1027,116 @@ class FloatingIconMenu(context: Context, showCloudHeader: Boolean) : FrameLayout
         )
         openRow.setOnClickListener { onOpenApp?.invoke() }
         panelRows.addView(openRow, panelRowParams())
+    }
+
+    /** Four live appearance controls. The label and percentage are visible
+     *  together while dragging. Only this widget's own touch lane consumes
+     *  touches; the existing full-screen menu backdrop still dismisses on
+     *  outside taps. The value is persisted through [onAppearanceChanged]. */
+    private fun addQuickAppearanceControls() {
+        val prefs = com.playtranslate.Prefs(context)
+        val header = TextView(context).apply {
+            text = context.getString(R.string.floating_menu_appearance)
+            textSize = 11f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(mutedColor)
+            setPadding((11 * dp).toInt(), (8 * dp).toInt(), 0, (4 * dp).toInt())
+        }
+        panelRows.addView(header, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
+        fun addSlider(labelRes: Int, value: Int, key: OverlayAppearanceSetting) {
+            val cell = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding((10 * dp).toInt(), 0, (9 * dp).toInt(), 0)
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val row = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            val title = TextView(context).apply {
+                text = context.getString(labelRes)
+                setTextColor(textColor)
+                textSize = 11f
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+            }
+            val number = TextView(context).apply {
+                text = "$" + "{value.coerceIn(0, 100)}%"
+                textSize = 11f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(accentColor)
+                gravity = Gravity.END
+            }
+            row.addView(title, LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            row.addView(number, LinearLayout.LayoutParams((43 * dp).toInt(),
+                ViewGroup.LayoutParams.WRAP_CONTENT))
+            cell.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                (17 * dp).toInt()))
+            val slider = SeekBar(context).apply {
+                max = 100
+                progress = value.coerceIn(0, 100)
+                progressTintList = ColorStateList.valueOf(accentColor)
+                thumbTintList = ColorStateList.valueOf(accentColor)
+                progressBackgroundTintList = ColorStateList.valueOf(hintColor)
+                contentDescription = context.getString(labelRes)
+                setPadding(0, 0, 0, 0)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                        if (!fromUser) return
+                        number.text = "$" + "{progress}%"
+                        onAppearanceChanged?.invoke(key, progress)
+                    }
+                    override fun onStartTrackingTouch(seekBar: SeekBar) {
+                        seekBar.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    override fun onStopTrackingTouch(seekBar: SeekBar) {
+                        seekBar.parent?.requestDisallowInterceptTouchEvent(false)
+                    }
+                })
+            }
+            cell.addView(slider, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (25 * dp).toInt()))
+            panelRows.addView(cell, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (47 * dp).toInt()))
+            panelRows.addView(panelDivider())
+        }
+
+        addSlider(R.string.floating_menu_style_transparency,
+            prefs.overlayBackgroundTransparency, OverlayAppearanceSetting.TRANSPARENCY)
+        addSlider(R.string.floating_menu_style_blur,
+            prefs.overlayBackgroundBlur, OverlayAppearanceSetting.BLUR)
+        addSlider(R.string.floating_menu_style_fade,
+            prefs.overlayBackgroundEdgeFade, OverlayAppearanceSetting.EDGE_FADE)
+
+        val rounded = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding((11 * dp).toInt(), 0, (11 * dp).toInt(), 0)
+        }
+        val roundedTitle = TextView(context).apply {
+            text = context.getString(R.string.floating_menu_style_rounded)
+            setTextColor(textColor)
+            textSize = 11f
+        }
+        val roundedSwitch = MaterialSwitch(context).apply {
+            isChecked = prefs.overlayBackgroundRounded
+            contentDescription = context.getString(R.string.floating_menu_style_rounded)
+            setOnCheckedChangeListener { _, checked ->
+                onAppearanceChanged?.invoke(OverlayAppearanceSetting.ROUNDED, if (checked) 1 else 0)
+            }
+        }
+        rounded.addView(roundedTitle, LinearLayout.LayoutParams(0,
+            ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        rounded.addView(roundedSwitch, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
+        rounded.setOnClickListener { roundedSwitch.toggle() }
+        panelRows.addView(rounded, LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, (40 * dp).toInt()))
+        panelRows.addView(panelDivider())
     }
 
     /** Update the Overlays row's value after the mode cycles, without a rebuild. */

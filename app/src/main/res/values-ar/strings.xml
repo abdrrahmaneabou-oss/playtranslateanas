@@ -2217,4 +2217,9 @@
     <string name="backup_first_explanation">اختر مجلداً خارج PlayTranslate لحفظ ملفات العربية والإنجليزية بعد تنزيلها، واستعادتها بعد إعادة تثبيت التطبيق حتى لو تغير توقيعه. هذا الإذن اختياري.</string>
     <string name="backup_open_settings">استيراد نسخة</string>
     <string name="backup_first_restore_now">تم اختيار المجلد. هل تريد استعادة ملفات العربية أو الإنجليزية المحفوظة الآن؟</string>
+    <string name="floating_menu_appearance">مظهر الترجمة</string>
+    <string name="floating_menu_style_transparency">الشفافية</string>
+    <string name="floating_menu_style_blur">الضبابية</string>
+    <string name="floating_menu_style_fade">تلاشي الحواف</string>
+    <string name="floating_menu_style_rounded">تدوير الزوايا</string>
 </resources>

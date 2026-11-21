@@ -4925,4 +4925,9 @@
     <string name="backup_first_explanation">Choose a folder outside PlayTranslate to save downloaded English and Arabic language packs. You can restore them after reinstalling, even if the app signing key changes. This is optional.</string>
     <string name="backup_open_settings">Restore backups</string>
     <string name="backup_first_restore_now">Folder selected. Do you want to restore an existing English or Arabic backup now?</string>
+    <string name="floating_menu_appearance">OVERLAY APPEARANCE</string>
+    <string name="floating_menu_style_transparency">Transparency</string>
+    <string name="floating_menu_style_blur">Blur</string>
+    <string name="floating_menu_style_fade">Edge fading</string>
+    <string name="floating_menu_style_rounded">Rounded corners</string>
 </resources>
