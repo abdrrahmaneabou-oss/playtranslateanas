@@ -24,6 +24,10 @@ data class OverlayRenderConfig(
     val verticalTextStackable: Boolean = false,
     val verticalGrowEnabled: Boolean = false,
     val minTextSp: Int = Prefs.OVERLAY_MIN_TEXT_SP_DEFAULT,
+    val backgroundTransparency: Int = 12,
+    val backgroundBlur: Int = 0,
+    val backgroundRounded: Boolean = false,
+    val backgroundEdgeFade: Int = 0,
 ) {
     companion object {
         /** A Latin-like target with every optional behaviour off. */
@@ -34,6 +38,10 @@ data class OverlayRenderConfig(
             verticalTextStackable = stackableTargetScript(prefs.targetLang),
             verticalGrowEnabled = prefs.verticalTextGrow,
             minTextSp = prefs.overlayMinTextSp,
+            backgroundTransparency = prefs.overlayBackgroundTransparency,
+            backgroundBlur = prefs.overlayBackgroundBlur,
+            backgroundRounded = prefs.overlayBackgroundRounded,
+            backgroundEdgeFade = prefs.overlayBackgroundEdgeFade,
         )
     }
 }

@@ -4897,4 +4897,12 @@
          (backend error or empty result; there is no OCR in this flow). -->
     <string name="process_text_translation_failed">Couldn\'t translate the selected text. Check your connection or language settings.</string>
 
+    <string name="settings_overlay_bg_transparency_title">Background transparency</string>
+    <string name="settings_overlay_bg_transparency_subtitle">0% opaque; 100% removes the colour fill.</string>
+    <string name="settings_overlay_bg_blur_title">Background blur</string>
+    <string name="settings_overlay_bg_blur_subtitle">Soften captured game pixels behind translations; 0% disables blur.</string>
+    <string name="settings_overlay_bg_round_title">Rounded corners</string>
+    <string name="settings_overlay_bg_round_subtitle">Round the edges of translation backgrounds.</string>
+    <string name="settings_overlay_bg_fade_title">Edge fading</string>
+    <string name="settings_overlay_bg_fade_subtitle">Fade each background gradually into the game.</string>
 </resources>

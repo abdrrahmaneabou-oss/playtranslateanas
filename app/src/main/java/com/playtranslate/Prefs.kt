@@ -1283,6 +1283,24 @@ class Prefs internal constructor(
             putInt(KEY_OVERLAY_MIN_TEXT_SP, v.coerceIn(OVERLAY_MIN_TEXT_SP_DEFAULT, OVERLAY_MIN_TEXT_SP_MAX))
         }
 
+    /** Background colour transparency: 0 opaque, 100 invisible. Default 12% approximates historical native alpha. */
+    var overlayBackgroundTransparency: Int
+        get() = sp.getInt(KEY_OVERLAY_BG_TRANSPARENCY, 12).coerceIn(0, 100)
+        set(v) = sp.edit { putInt(KEY_OVERLAY_BG_TRANSPARENCY, v.coerceIn(0, 100)) }
+
+    /** Blur intensity in percent; no frame sampling at zero. */
+    var overlayBackgroundBlur: Int
+        get() = sp.getInt(KEY_OVERLAY_BG_BLUR, 0).coerceIn(0, 100)
+        set(v) = sp.edit { putInt(KEY_OVERLAY_BG_BLUR, v.coerceIn(0, 100)) }
+
+    var overlayBackgroundRounded: Boolean
+        get() = sp.getBoolean(KEY_OVERLAY_BG_ROUNDED, false)
+        set(v) = sp.edit { putBoolean(KEY_OVERLAY_BG_ROUNDED, v) }
+
+    var overlayBackgroundEdgeFade: Int
+        get() = sp.getInt(KEY_OVERLAY_BG_EDGE_FADE, 0).coerceIn(0, 100)
+        set(v) = sp.edit { putInt(KEY_OVERLAY_BG_EDGE_FADE, v.coerceIn(0, 100)) }
+
     /** Drop furigana (ruby) regions from Japanese OCR before grouping, so
      *  readings printed beside kanji are neither translated nor overlaid. See
      *  [com.playtranslate.ocr.core.RubyFilter] for the rule and its census.
@@ -2269,6 +2287,10 @@ class Prefs internal constructor(
         /** Public so a showing result panel can [observe] it. */
         const val KEY_EDGE_INDICATOR_ENABLED               = "edge_indicator_enabled"
         private const val KEY_OVERLAY_MIN_TEXT_SP          = "overlay_min_text_sp"
+        private const val KEY_OVERLAY_BG_TRANSPARENCY = "overlay_bg_transparency"
+        private const val KEY_OVERLAY_BG_BLUR = "overlay_bg_blur"
+        private const val KEY_OVERLAY_BG_ROUNDED = "overlay_bg_rounded"
+        private const val KEY_OVERLAY_BG_EDGE_FADE = "overlay_bg_edge_fade"
         private const val KEY_FILTER_FURIGANA              = "filter_furigana"
         private const val KEY_LAST_UPDATE_CHECK            = "last_update_check"
         private const val KEY_LAST_YOMITAN_UPDATE_CHECK    = "last_yomitan_update_check"

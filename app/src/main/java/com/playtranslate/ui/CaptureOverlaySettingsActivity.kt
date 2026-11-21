@@ -108,6 +108,14 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
     private lateinit var sliderOverlayMinText: SizeSliderView
     private lateinit var tvOverlayMinTextValue: TextView
     private lateinit var tvOverlayMinTextExample: TextView
+    private lateinit var sliderBackgroundTransparency: SizeSliderView
+    private lateinit var sliderBackgroundBlur: SizeSliderView
+    private lateinit var sliderBackgroundEdgeFade: SizeSliderView
+    private lateinit var tvBackgroundTransparencyValue: TextView
+    private lateinit var tvBackgroundBlurValue: TextView
+    private lateinit var tvBackgroundEdgeFadeValue: TextView
+    private lateinit var rowBackgroundRounded: View
+    private lateinit var switchBackgroundRounded: MaterialSwitch
     private lateinit var rowFilterFurigana: View
     private lateinit var switchFilterFurigana: MaterialSwitch
     private lateinit var rowVerticalGrow: View
@@ -141,6 +149,14 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
         switchHideOverlays = rowHideOverlays.findViewById(R.id.switchRowToggle)
         rowTouchesRefresh = findViewById(R.id.rowTouchesRefresh)
         switchTouchesRefresh = rowTouchesRefresh.findViewById(R.id.switchRowToggle)
+        sliderBackgroundTransparency = findViewById(R.id.sliderBackgroundTransparency)
+        sliderBackgroundBlur = findViewById(R.id.sliderBackgroundBlur)
+        sliderBackgroundEdgeFade = findViewById(R.id.sliderBackgroundEdgeFade)
+        tvBackgroundTransparencyValue = findViewById(R.id.tvBackgroundTransparencyValue)
+        tvBackgroundBlurValue = findViewById(R.id.tvBackgroundBlurValue)
+        tvBackgroundEdgeFadeValue = findViewById(R.id.tvBackgroundEdgeFadeValue)
+        rowBackgroundRounded = findViewById(R.id.rowBackgroundRounded)
+        switchBackgroundRounded = rowBackgroundRounded.findViewById(R.id.switchRowToggle)
         rowFilterFurigana = findViewById(R.id.rowFilterFurigana)
         switchFilterFurigana = rowFilterFurigana.findViewById(R.id.switchRowToggle)
         rowVerticalGrow = findViewById(R.id.rowVerticalGrow)
@@ -366,6 +382,43 @@ class CaptureOverlaySettingsActivity : SettingsSubPageActivity() {
                 CaptureService.instance?.stopLive()
             }
         }
+
+        // A changed render config takes effect with a fresh live capture,
+        // as the existing minimum-text-size setting does.
+        fun bindAppearanceSlider(slider: SizeSliderView, valueText: TextView,
+            titleRes: Int, initial: Int, save: (Int) -> Unit) {
+            slider.setRange(0, 100)
+            slider.value = initial
+            slider.contentDescription = getString(titleRes)
+            valueText.text = initial.toString() + "%"
+            slider.onValueChange = { value ->
+                valueText.text = value.toString() + "%"
+                save(value)
+                if (CaptureService.instance?.isLive == true) CaptureService.instance?.stopLive()
+            }
+        }
+        bindAppearanceSlider(sliderBackgroundTransparency, tvBackgroundTransparencyValue,
+            R.string.settings_overlay_bg_transparency_title, prefs.overlayBackgroundTransparency
+        ) { prefs.overlayBackgroundTransparency = it }
+        bindAppearanceSlider(sliderBackgroundBlur, tvBackgroundBlurValue,
+            R.string.settings_overlay_bg_blur_title, prefs.overlayBackgroundBlur
+        ) { prefs.overlayBackgroundBlur = it }
+        bindAppearanceSlider(sliderBackgroundEdgeFade, tvBackgroundEdgeFadeValue,
+            R.string.settings_overlay_bg_fade_title, prefs.overlayBackgroundEdgeFade
+        ) { prefs.overlayBackgroundEdgeFade = it }
+
+        rowBackgroundRounded.findViewById<TextView>(R.id.tvRowTitle)
+            .setText(R.string.settings_overlay_bg_round_title)
+        rowBackgroundRounded.findViewById<TextView>(R.id.tvRowSubtitle).apply {
+            setText(R.string.settings_overlay_bg_round_subtitle)
+            isVisible = true
+        }
+        switchBackgroundRounded.isChecked = prefs.overlayBackgroundRounded
+        switchBackgroundRounded.setOnCheckedChangeListener { _, checked ->
+            prefs.overlayBackgroundRounded = checked
+            if (CaptureService.instance?.isLive == true) CaptureService.instance?.stopLive()
+        }
+        rowBackgroundRounded.setOnClickListener { switchBackgroundRounded.toggle() }
 
         // -- Filter furigana toggle (Japanese source only) --
         // Drops furigana from Japanese OCR before grouping (RubyFilter). Read
