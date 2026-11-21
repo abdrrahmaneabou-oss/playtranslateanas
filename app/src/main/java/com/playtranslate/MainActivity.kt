@@ -409,6 +409,43 @@ class MainActivity :
 
     // ── Notification permission ────────────────────────────────────────────
 
+    private val languageBackupFolderPicker = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            if (com.playtranslate.language.LanguageBackupManager.grantFolder(this, uri)) {
+                // Make restore available during the first-run wizard, before
+                // any language has been chosen or downloaded.
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.backup_folder_saved)
+                    .setMessage(R.string.backup_first_restore_now)
+                    .setPositiveButton(R.string.backup_open_settings) { _, _ ->
+                        startActivity(Intent(this, com.playtranslate.ui.LanguageBackupActivity::class.java))
+                    }
+                    .setNegativeButton(R.string.btn_cancel, null)
+                    .show()
+            } else {
+                Toast.makeText(this, R.string.backup_folder_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun offerLanguageBackupFolderOnce() {
+        if (!com.playtranslate.language.LanguageBackupManager.shouldPrompt(this)) return
+        com.playtranslate.language.LanguageBackupManager.markPrompted(this)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.backup_first_title)
+            .setMessage(R.string.backup_first_explanation)
+            .setPositiveButton(R.string.backup_choose_folder) { _, _ ->
+                languageBackupFolderPicker.launch(null)
+            }
+            .setNeutralButton(R.string.backup_open_settings) { _, _ ->
+                startActivity(Intent(this, com.playtranslate.ui.LanguageBackupActivity::class.java))
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
     private val notifPermLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -636,6 +673,9 @@ class MainActivity :
             }
         }
         setContentView(R.layout.activity_main)
+        // The SAF permission prompt is first-run only. It is optional, and
+        // never blocks the normal onboarding if the user skips it.
+        window.decorView.post { if (!isFinishing) offerLanguageBackupFolderOnce() }
         DrawRateProbe.attach(window.decorView, "mainActivity")
         // Pad for system chrome only (status bar top, cutout sides, nav bar
         // bottom). IME insets are deliberately NOT folded in here and the

@@ -4905,4 +4905,24 @@
     <string name="settings_overlay_bg_round_subtitle">Round the edges of translation backgrounds.</string>
     <string name="settings_overlay_bg_fade_title">Edge fading</string>
     <string name="settings_overlay_bg_fade_subtitle">Fade each background gradually into the game.</string>
+    <string name="backup_language_title">Language backups</string>
+    <string name="backup_settings_subtitle">Save or restore English and Arabic packs</string>
+    <string name="backup_language_explanation">Choose an external folder once. After a language download, PlayTranslate automatically saves its installed pack there. Re-grant the folder after reinstalling. Saved ZIP files can be restored here without downloading the dictionaries again. Some Google-managed offline models may still require a separate download.</string>
+    <string name="backup_choose_folder">Choose backup folder</string>
+    <string name="backup_no_folder">No external folder selected</string>
+    <string name="backup_folder_saved">Backup folder granted</string>
+    <string name="backup_folder_failed">Could not access the selected folder</string>
+    <string name="backup_save_header">Save installed language packs now</string>
+    <string name="backup_save_english">SAVE ENGLISH BACKUP</string>
+    <string name="backup_save_arabic">SAVE ARABIC BACKUP</string>
+    <string name="backup_restore_header">Restore a saved backup</string>
+    <string name="backup_restore_hint">ENGLISH EXPORT and ARABIC EXPORT open a file picker to import your previously saved ZIP. Files are verified before installation.</string>
+    <string name="backup_working">Preparing backup…</string>
+    <string name="backup_restoring">Verifying and restoring backup…</string>
+    <string name="backup_saved_as">Saved: %1$s</string>
+    <string name="backup_failed_reason">Backup failed: %1$s</string>
+    <string name="backup_first_title">Protect your language downloads</string>
+    <string name="backup_first_explanation">Choose a folder outside PlayTranslate to save downloaded English and Arabic language packs. You can restore them after reinstalling, even if the app signing key changes. This is optional.</string>
+    <string name="backup_open_settings">Restore backups</string>
+    <string name="backup_first_restore_now">Folder selected. Do you want to restore an existing English or Arabic backup now?</string>
 </resources>

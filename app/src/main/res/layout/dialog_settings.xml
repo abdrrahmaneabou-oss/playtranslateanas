@@ -508,6 +508,9 @@
                         <include layout="@layout/settings_row_hub"
                             android:id="@+id/rowConfigAppearance" />
 
+                        <include layout="@layout/settings_row_hub"
+                            android:id="@+id/rowConfigLanguageBackup" />
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>

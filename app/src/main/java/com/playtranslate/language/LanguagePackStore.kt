@@ -238,6 +238,9 @@ object LanguagePackStore {
             // 5. Rollback-safe swap: old pack is backed up, new pack promoted,
             //    backup deleted only after the new pack is confirmed in place.
             safeSwap(tmpDir, finalDir)
+            // Best effort and outside this download's critical path: a SAF
+            // export failure must never undo a successfully installed pack.
+            LanguageBackupManager.queueExport(app, id)
 
             Log.d(TAG, "Installed pack ${id.code} from $url (${zipFile.length()} bytes)")
             InstallResult.Success
@@ -307,6 +310,7 @@ object LanguagePackStore {
 
             // 5. Rollback-safe swap
             safeSwap(tmpDir, finalDir)
+            if (targetLang == "ar") LanguageBackupManager.queueExport(app, SourceLangId.AR)
 
             Log.d(TAG, "Installed target pack $catalogKey from $url (${zipFile.length()} bytes)")
             InstallResult.Success

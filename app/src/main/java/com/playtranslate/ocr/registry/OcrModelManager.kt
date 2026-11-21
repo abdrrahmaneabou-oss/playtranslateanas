@@ -406,7 +406,12 @@ object OcrModelManager {
             // Success: nothing to log. Cancelled: shadowed by the downloader's
             // withContext rethrow on Job-cancel, so it's only reachable via a
             // non-Job cancellation (e.g. an inner timeout) — best-effort, ignore.
-            OnDeviceLlmDownloader.Outcome.Success,
+            OnDeviceLlmDownloader.Outcome.Success -> {
+                if (key == "paddle-rec-arabic") {
+                    com.playtranslate.language.LanguageBackupManager.queueExport(ctx,
+                        SourceLangId.AR)
+                }
+            }
             OnDeviceLlmDownloader.Outcome.Cancelled -> Unit
         }
     }
