@@ -44,8 +44,15 @@ internal class TranslationBackdropDrawable(
         val h = bounds.height().toFloat()
         if (w <= 0f || h <= 0f) return
 
-        val layer = canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(),
-            bounds.right.toFloat(), bounds.bottom.toFloat(), null)
+        // Allocate an offscreen compositing layer only when alpha feathering
+        // requires a DST_OUT mask. Plain transparency and rounded corners use
+        // a lightweight canvas save/clip, even on busy 60-fps game screens.
+        val layer = if (edgeFade > 0) {
+            canvas.saveLayer(bounds.left.toFloat(), bounds.top.toFloat(),
+                bounds.right.toFloat(), bounds.bottom.toFloat(), null)
+        } else {
+            canvas.save()
+        }
         canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
         if (rounded) {
             clipping.reset()
